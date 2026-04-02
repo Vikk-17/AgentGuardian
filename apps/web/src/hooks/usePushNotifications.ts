@@ -29,7 +29,7 @@ export function usePushNotifications() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
           import.meta.env.VITE_VAPID_PUBLIC_KEY
-        ),
+        ) as unknown as Uint8Array<ArrayBuffer>,
       });
       await apiClient.post('/auth/push-subscription', subscription.toJSON());
     }
