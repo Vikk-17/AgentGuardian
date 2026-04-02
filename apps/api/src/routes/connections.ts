@@ -59,7 +59,7 @@ router.get('/:service/authorize', requireAuth, async (req: Request, res: Respons
     // Generate Auth0 authorization URL for Token Vault connection
     const authUrl = `https://${env.AUTH0_DOMAIN}/authorize?` +
       `response_type=code&` +
-      `client_id=${env.AUTH0_M2M_CLIENT_ID}&` +
+      `client_id=${env.AUTH0_CLIENT_ID}&` +
       `connection=${connectionName}&` +
       `redirect_uri=${encodeURIComponent(env.FRONTEND_URL + '/connections/callback')}&` +
       `scope=openid profile email&` +

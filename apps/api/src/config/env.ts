@@ -16,6 +16,7 @@ const envSchema = z.object({
   // Auth0
   AUTH0_DOMAIN: z.string().min(1),
   AUTH0_AUDIENCE: z.string().min(1),
+  AUTH0_CLIENT_ID: z.string().min(1),
   AUTH0_M2M_CLIENT_ID: z.string().min(1),
   AUTH0_M2M_CLIENT_SECRET: z.string().min(1),
   AUTH0_TOKEN_VAULT_BASE_URL: z.string().optional(),

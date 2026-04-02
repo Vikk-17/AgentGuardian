@@ -37,26 +37,34 @@ export async function getServiceToken(
     }
 
     // In production, this calls auth0Management.users.getTokenVaultToken()
-    // For now, we attempt the Token Vault API call
-    const response = await (auth0Management as any).tokenVault?.getToken?.({
-      userId,
-      connection,
-    });
-
-    if (!response?.access_token) {
-      // Fallback: try the federated token endpoint
-      const tokenResp = await (auth0Management as any).users?.getToken?.({
-        id: userId,
+    // We attempt explicit calls and catch SDK incompatibilities gracefully
+    try {
+      const response = await (auth0Management as any).tokenVault.getToken({
+        userId,
         connection,
       });
-
-      if (!tokenResp?.access_token) {
-        throw new Error('Token Vault returned empty token');
+      
+      if (!response?.access_token) {
+        throw new Error('Token Vault returned an empty or invalid access token');
       }
-      return tokenResp.access_token;
-    }
+      
+      return response.access_token;
+    } catch (err: any) {
+      // SDK might not have tokenVault mapped, fallback to manual users token extraction
+      if (err instanceof TypeError || (err.message && err.message.includes('not a function')) || err.message?.includes('tokenVault is undefined')) {
+        const tokenResp = await (auth0Management as any).users.getToken({
+          id: userId,
+          connection,
+        });
 
-    return response.access_token;
+        if (!tokenResp?.access_token) {
+          throw new Error('Token Vault returned empty token on fallback');
+        }
+        return tokenResp.access_token;
+      }
+      
+      throw err; // Valid Auth0 Error!
+    }
   } catch (err: any) {
     logger.error('Token Vault error', {
       service,
