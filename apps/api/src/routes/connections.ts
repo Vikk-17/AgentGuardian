@@ -7,6 +7,7 @@ import { env } from '../config/env';
 import { auth0Management } from '../config/auth0';
 import { emitConnectionRevoked } from '../services/notificationService';
 import { SERVICE_CONNECTION_MAP } from '@agent-guardian/shared';
+import { DeleteUserIdentityByUserIdProviderEnum } from 'auth0';
 
 const router = Router();
 
@@ -136,7 +137,7 @@ router.delete('/:service', requireAuth, async (req: Request, res: Response) => {
       SLACK: 'slack',
       NOTION: 'notion',
     };
-    
+
     try {
       const provider = connectionProviderMap[service.toUpperCase()];
       if (provider) {
@@ -144,10 +145,10 @@ router.delete('/:service', requireAuth, async (req: Request, res: Response) => {
         if (auth0User.data && auth0User.data.identities) {
           const identityToUnlink = auth0User.data.identities.find(i => i.provider === provider);
           if (identityToUnlink) {
-            await auth0Management.users.unlinkIdentity({ 
-              id: auth0UserId, 
-              provider, 
-              user_id: identityToUnlink.user_id 
+            await auth0Management.users.unlink({
+              id: auth0UserId,
+              provider: provider as DeleteUserIdentityByUserIdProviderEnum,
+              user_id: identityToUnlink.user_id
             });
             logger.info('Auth0 Token Vault connection revoked', { auth0UserId, service });
           }
