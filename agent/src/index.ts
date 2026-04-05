@@ -16,7 +16,12 @@ function discoverGitContext() {
     const originUrl = execSync('git config --get remote.origin.url').toString().trim();
     // Handles git@github.com:user/repo.git and https://github.com/user/repo.git
     const match = originUrl.match(/github\.com[:/](.+?)\/(.+?)(\.git)?$/);
-    if (match) return { owner: match[1], repo: match[2] };
+    if (match) {
+      return { 
+        remoteOwner: match[1], // Keep for reference, but don't use as default
+        repo: match[2] 
+      };
+    }
   } catch (e) {
     return null;
   }
@@ -33,7 +38,11 @@ async function main() {
 
   console.log(`🔑 Agent token acquired`);
   console.log(`👤 Acting as: ${user.email} (${user.auth0UserId})`);
-  if (gitContext) console.log(`📂 Active Workspace Detected: ${gitContext.owner}/${gitContext.repo}`);
+  if (gitContext) {
+    console.log(`📂 Active Repository: ${gitContext.repo}`);
+    console.log(`   Remote origin: ${gitContext.remoteOwner}/${gitContext.repo}`);
+    console.log(`   ⚠️  Agent will act on YOUR repositories unless you specify an owner`);
+  }
   console.log(`🧠 Model: ${MODEL}`);
   console.log(`\nChat session started. Type 'exit' to quit.\n`);
 
@@ -44,13 +53,23 @@ async function main() {
       content: `You are a helpful AI assistant connected to Agent Guardian.
 You can help the user manage their connected services via the execute_action tool.
 When the user asks you to take an action, use the tool. DO NOT ask the user for permission before calling the tool, because Agent Guardian will securely intercept and request human approval via its Trust Layer automatically. Just confidently call the tool.
-CRITICAL: You need the 'repo' name for all GitHub actions. The 'owner' field is optional—if you leave it empty or undefined, the backend will automatically inject the GitHub username of the currently logged-in user! You only need to provide 'owner' if the user specifically asks to act on someone else's repository.
+CRITICAL: You need the 'repo' name for all GitHub actions. The 'owner' field is optional—if you leave it empty or undefined, the backend will automatically inject the GitHub username of the currently authenticated user! You only need to provide 'owner' if the user specifically asks to act on someone else's repository.
 
 AMBIENT CONTEXT:
-The user is currently executing this agent from a terminal located inside a local codebase:
-- Default Owner/Username: ${gitContext ? gitContext.owner : 'UNKNOWN'}
-- Default Repository: ${gitContext ? gitContext.repo : 'UNKNOWN'}
-If the user asks you to modify "this repo", "my repo", or doesn't specify an owner/repository, intelligently use the Default Owner and Default Repository provided above!
+${gitContext ? `The user is currently executing this agent from a terminal located inside a local codebase:
+- Local Repository: ${gitContext.repo}
+- Remote Origin: ${gitContext.remoteOwner}/${gitContext.repo}
+
+This is ONLY for reference. The user can work on ANY repository they have access to.` : 'No local repository context detected.'}
+
+IMPORTANT REPOSITORY RESOLUTION RULES:
+1. If the user says "this repo" or "my repo" → ${gitContext ? `use repo: "${gitContext.repo}"` : 'ask them to specify which repository'}
+2. If the user mentions a specific repo name → use that repo name
+3. If the user mentions "owner/repo" format → use that owner and repo
+4. If the user doesn't specify a repo → ask them which repository they want to work on
+5. ALWAYS omit the 'owner' field unless the user explicitly mentions a different owner (like an organization or another user's repo)
+
+The backend will auto-resolve omitted owner fields to the authenticated user's GitHub username.
 
 If the tool returns a success indicating it was approved, tell the user it was completed.
 If the tool returns that it failed or was rejected, tell the user.

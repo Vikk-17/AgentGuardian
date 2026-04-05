@@ -1,3 +1,4 @@
+// agent/src/llm/executeTool.ts
 import { waitForApproval } from '../guardian/waitForApproval';
 
 export async function executeGuardianAction(
@@ -28,7 +29,6 @@ export async function executeGuardianAction(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      'x-agent-auth0-user-id': userId
     },
     body: JSON.stringify(reqBody)
   });
@@ -44,7 +44,12 @@ export async function executeGuardianAction(
   if (data.status === 'EXECUTED') {
     console.log(`✅ Action executed immediately (Tier: ${data.tier})`);
     return `Success: ${JSON.stringify(data.data)}`;
-  } 
+  }
+  
+  if (data.status === 'FAILED') {
+    console.log(`❌ Action failed: ${data.error}`);
+    return `Error: ${data.error}`;
+  }
   
   if (data.status === 'PENDING_APPROVAL' || data.status === 'AWAITING_MFA') {
     console.log(`⏸️  Action requires Human Approval. (Tier: ${data.tier})`);

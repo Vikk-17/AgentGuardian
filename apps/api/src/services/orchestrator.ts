@@ -119,7 +119,18 @@ async function handleAutoTier(
         payloadHash,
         metadata: { error: err.message },
       });
-      return { tier: 'AUTO', status: 'FAILED', error: err.message, auditLogId: auditLog.id };
+      
+      // Return user-friendly error message
+      const friendlyMessage = err instanceof ServiceNotConnectedError
+        ? `${service.toUpperCase()} is not connected. Please connect it via the dashboard at ${env.FRONTEND_URL || 'http://localhost:5173'}/connections`
+        : `${service.toUpperCase()} token has expired. Please reconnect it via the dashboard at ${env.FRONTEND_URL || 'http://localhost:5173'}/connections`;
+      
+      return { 
+        tier: 'AUTO', 
+        status: 'FAILED', 
+        error: friendlyMessage, 
+        auditLogId: auditLog.id 
+      };
     }
     throw err;
   }

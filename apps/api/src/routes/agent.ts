@@ -23,13 +23,46 @@ const actionIntentSchema = z.object({
 });
 
 // POST /api/v1/agent/action — Primary action endpoint
-function requireAgentOrDashboard(req: Request, res: Response, next: import('express').NextFunction) {
+// Supports both M2M agent tokens and human dashboard tokens
+async function requireAgentOrDashboard(req: Request, res: Response, next: import('express').NextFunction) {
   const payload = (req as any).auth?.payload;
   const scopes = ((payload?.scope as string) ?? '').split(' ');
   
   if (scopes.includes('agent:act')) {
-    // M2M agent token path - use requireAgentAuth
-    return requireAgentAuth(req, res, next);
+    // M2M agent token path - resolve user dynamically
+    const actingUserId = payload?.['https://agentguardian.com/userId'] as string | undefined;
+    
+    if (actingUserId) {
+      // Production: Use custom claim from JWT
+      (req as any).actingUserId = actingUserId;
+      (req as any).agentId = payload?.['https://agentguardian.com/agentId'] || 'agent-cli';
+      return next();
+    }
+    
+    // Development: Auto-discover most recent user
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+      try {
+        const recentUser = await prisma.user.findFirst({
+          orderBy: { updatedAt: 'desc' },
+        });
+        
+        if (recentUser) {
+          (req as any).actingUserId = recentUser.auth0UserId;
+          (req as any).agentId = 'agent-cli';
+          logger.info('Agent action: auto-resolved to most recent user', {
+            auth0UserId: recentUser.auth0UserId,
+          });
+          return next();
+        }
+      } catch (err: any) {
+        logger.error('Failed to auto-resolve user', { error: err.message });
+      }
+    }
+    
+    return res.status(403).json({
+      error: 'no_acting_user',
+      message: 'Cannot determine acting user. Please log into the dashboard at http://localhost:5173 first.',
+    });
   }
   
   // Human dashboard path - set acting user ID from sub claim
@@ -242,14 +275,14 @@ router.post(
   }
 );
 // GET /api/v1/agent/whoami — Resolve which user the agent is acting on behalf of.
-// In production the userId claim is baked into the M2M token.
-// In development it auto-discovers the first GitHub-connected user so the agent
-// doesn't need AGENT_ACTING_AUTH0_USER_ID hardcoded in .env.
+// Production: userId claim is baked into the M2M token via Auth0 Action.
+// Development: Auto-discovers the most recently active user (by updatedAt).
 router.get('/whoami', requireAuth, requireScope('agent:act'), async (req: Request, res: Response) => {
   try {
     const payload = (req as any).auth?.payload;
     const actingUserId = payload?.['https://agentguardian.com/userId'] as string | undefined;
 
+    // Production path: Use custom claim from JWT
     if (actingUserId) {
       const user = await prisma.user.findUnique({ where: { auth0UserId: actingUserId } });
       if (user) {
@@ -261,30 +294,28 @@ router.get('/whoami', requireAuth, requireScope('agent:act'), async (req: Reques
       }
     }
 
-    // Dev fallback: find first user who has a GitHub service token
+    // Development fallback: Find most recently active user
     if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      const githubUser = await prisma.user.findFirst({
-        where: {
-          connections: { some: { service: 'GITHUB' } },
-        },
+      const recentUser = await prisma.user.findFirst({
         orderBy: { updatedAt: 'desc' },
       });
 
-      if (githubUser) {
-        logger.info('whoami: auto-resolved to first GitHub-connected user', {
-          auth0UserId: githubUser.auth0UserId,
+      if (recentUser) {
+        logger.info('whoami: auto-resolved to most recently active user', {
+          auth0UserId: recentUser.auth0UserId,
+          email: recentUser.email,
         });
         return res.json({
-          auth0UserId: githubUser.auth0UserId,
-          email: githubUser.email,
-          name: githubUser.displayName,
+          auth0UserId: recentUser.auth0UserId,
+          email: recentUser.email,
+          name: recentUser.displayName,
         });
       }
     }
 
     return res.status(404).json({
       error: 'no_acting_user',
-      message: 'Cannot determine acting user. Connect a GitHub account via the dashboard first.',
+      message: 'Cannot determine acting user. Please log into the dashboard at http://localhost:5173 first to create your user profile.',
     });
   } catch (err: any) {
     logger.error('whoami error', { error: err.message });

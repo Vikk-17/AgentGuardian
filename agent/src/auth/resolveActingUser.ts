@@ -19,7 +19,7 @@ export async function resolveActingUser(agentToken: string): Promise<ActingUser>
     const err = await resp.json().catch(() => ({}));
     throw new Error(
       `Could not resolve acting user (${resp.status}): ${(err as any).message || resp.statusText}. ` +
-      `Make sure you have connected a GitHub account via the dashboard first.`
+      `Make sure you have logged into the dashboard at least once to create your user profile.`
     );
   }
 

@@ -35,7 +35,8 @@ docker-compose up -d
 # Configure environment
 cp .env.example apps/api/.env
 cp .env.example apps/web/.env
-# Edit both .env files — you need an Auth0 tenant with Token Vault connections for:
+cp agent/.env.example agent/.env
+# Edit .env files — you need an Auth0 tenant with Token Vault connections for:
 # Gmail, GitHub, Slack, Notion (see docs: https://auth0.com/docs/token-vault)
 
 # Run database migrations
@@ -44,11 +45,26 @@ npm run db:migrate
 # Seed demo data
 npm run db:seed
 
-# Start development servers
+# Start development servers (API + Web Dashboard)
 npm run dev
 ```
 
 Visit http://localhost:5173 to see the Auth0 login screen.
+
+### Running the Agent CLI
+
+```bash
+# First: Log into the dashboard to create your user profile
+# Visit http://localhost:5173 and sign in with Auth0
+
+# Then: Start the agent in a new terminal
+npm run dev -w agent
+
+# The agent automatically acts on behalf of the logged-in user!
+# No hardcoded user IDs needed ✨
+```
+
+See [docs/auth0-m2m-action-setup.md](docs/auth0-m2m-action-setup.md) for production setup.
 
 ## Architecture
 

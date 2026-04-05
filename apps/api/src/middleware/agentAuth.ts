@@ -25,42 +25,13 @@ export function requireAgentAuth(
   }
 
   // Extract the userId the agent is acting on behalf of
-  let userId  = payload[USER_ID_CLAIM] as string | undefined;
+  const userId  = payload[USER_ID_CLAIM] as string | undefined;
   const agentId = (payload[AGENT_ID_CLAIM] as string | undefined) || 'demo-agent-1';
 
   if (!userId) {
-    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-      const requestedAuth0UserId = req.header('x-agent-auth0-user-id');
-      const requestedEmail = req.header('x-agent-user-email');
-
-      if (!requestedAuth0UserId && !requestedEmail) {
-        return res.status(403).json({
-          error: 'forbidden',
-          message: 'Agent token is missing user binding. Set x-agent-auth0-user-id or x-agent-user-email in development, or configure the Auth0 M2M Action.',
-        });
-      }
-
-      return resolveDevelopmentAgentUser(requestedAuth0UserId, requestedEmail).then((matchedUser: any) => {
-        if (!matchedUser) {
-          return res.status(403).json({
-            error: 'forbidden',
-            message: requestedEmail
-              ? `No user found for email ${requestedEmail}. Try AGENT_ACTING_AUTH0_USER_ID if your DB profile was created without an email claim.`
-              : `No user found for ID ${requestedAuth0UserId}.`,
-          });
-        }
-
-        (req as any).actingUserId = matchedUser.auth0UserId;
-        (req as any).agentId = agentId;
-        next();
-      }).catch((err: any) => {
-        return res.status(500).json({ error: 'internal_error', message: err.message });
-      });
-    }
-
     return res.status(403).json({
       error: 'forbidden',
-      message: 'Agent token is missing user binding. Check Auth0 M2M Action.',
+      message: 'Agent token is missing user binding. Configure the Auth0 M2M Action to inject the userId claim, or use the /agent/whoami endpoint for dynamic user resolution.',
     });
   }
 
