@@ -1,6 +1,5 @@
 import { ActionTier, ServiceType } from './actions';
 
-// ─── Audit Statuses ─────────────────────────────────────
 export enum AuditStatus {
   EXECUTED = 'EXECUTED',
   APPROVED = 'APPROVED',
@@ -11,7 +10,6 @@ export enum AuditStatus {
   PENDING = 'PENDING',
 }
 
-// ─── Pending Action Statuses ────────────────────────────
 export enum PendingStatus {
   PENDING_APPROVAL = 'PENDING_APPROVAL',
   APPROVED = 'APPROVED',
@@ -19,13 +17,11 @@ export enum PendingStatus {
   EXPIRED = 'EXPIRED',
 }
 
-// ─── Connection Status ──────────────────────────────────
 export enum ConnectionStatus {
   ACTIVE = 'ACTIVE',
   REVOKED = 'REVOKED',
 }
 
-// ─── Audit Log Entry ────────────────────────────────────
 export interface AuditLogEntry {
   id: string;
   userId: string;
@@ -43,7 +39,6 @@ export interface AuditLogEntry {
   executedAt: string;
 }
 
-// ─── Pending Action Entry ───────────────────────────────
 export interface PendingActionEntry {
   id: string;
   userId: string;
@@ -64,7 +59,6 @@ export interface PendingActionEntry {
   stepUpVerified: boolean;
 }
 
-// ─── Service Connection Entry ───────────────────────────
 export interface ServiceConnectionEntry {
   id: string;
   userId: string;
@@ -75,7 +69,6 @@ export interface ServiceConnectionEntry {
   revokedAt?: string;
 }
 
-// ─── Audit Stats ────────────────────────────────────────
 export interface AuditStats {
   totalActions: number;
   byTier: Record<ActionTier, number>;

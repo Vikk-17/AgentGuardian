@@ -1,4 +1,3 @@
-// ─── Types ──────────────────────────────────────────────
 export {
   ServiceType,
   ActionTier,
@@ -32,7 +31,6 @@ export type {
   SocketEvents,
 } from './types/permissions';
 
-// ─── Constants ──────────────────────────────────────────
 export {
   DEFAULT_TIER_MAP,
   ACTION_DESCRIPTIONS,

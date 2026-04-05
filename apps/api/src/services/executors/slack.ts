@@ -1,4 +1,3 @@
-// src/services/executors/slack.ts — Slack API executor
 import { logger } from '../../lib/logger';
 import type { ExecutionResult } from './index';
 

@@ -1,4 +1,3 @@
-// src/routes/connections.ts — Service Connection Routes
 import { Router, Request, Response } from 'express';
 import { requireAuth, getUserId } from '../middleware/auth';
 import { prisma } from '../lib/prisma';

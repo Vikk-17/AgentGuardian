@@ -1,4 +1,3 @@
-// src/services/executors/gmail.ts — Gmail API executor
 import { logger } from '../../lib/logger';
 import type { ExecutionResult } from './index';
 

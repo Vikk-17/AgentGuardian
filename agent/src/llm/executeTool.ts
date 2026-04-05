@@ -1,4 +1,3 @@
-// agent/src/llm/executeTool.ts
 import { waitForApproval } from '../guardian/waitForApproval';
 
 export async function executeGuardianAction(

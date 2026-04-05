@@ -1,7 +1,6 @@
 import { createRemoteJWKSet } from 'jose';
 import { env } from '../config/env';
 
-// ─── JWKS Client with Cache (Section 16.3.3) ────────────
 // createRemoteJWKSet caches the JWKS automatically.
 // The cache is invalidated on key rotation (Auth0 sends a new kid).
 export const JWKS = createRemoteJWKSet(

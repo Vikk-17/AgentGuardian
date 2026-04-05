@@ -2,7 +2,6 @@ import webpush from 'web-push';
 import { env } from '../config/env';
 import { logger } from './logger';
 
-// ─── Web Push Setup (Section 16.5.2) ────────────────────
 if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     'mailto:team@agentguardian.com',

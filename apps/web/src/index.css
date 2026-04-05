@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Global Styles ──────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
@@ -30,13 +29,11 @@
 }
 
 @layer components {
-  /* ─── Card ──────────────────────────────────────────── */
   .card {
     @apply bg-card rounded-xl border border-border shadow-sm
            transition-all duration-200 hover:shadow-md;
   }
 
-  /* ─── Tier Badges ───────────────────────────────────── */
   .badge-auto {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
            bg-emerald-50 text-emerald-700 border border-emerald-200;
@@ -50,7 +47,6 @@
            bg-red-50 text-red-700 border border-red-200;
   }
 
-  /* ─── Status Badges ─────────────────────────────────── */
   .badge-executed {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
            bg-emerald-100 text-emerald-800;
@@ -72,7 +68,6 @@
            bg-amber-100 text-amber-800 animate-pulse-slow;
   }
 
-  /* ─── Buttons ───────────────────────────────────────── */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
            font-medium text-sm transition-all duration-150
@@ -100,13 +95,11 @@
            focus:ring-red-500 shadow-sm;
   }
 
-  /* ─── Nudge Alert Card ──────────────────────────────── */
   .nudge-card {
     @apply card border-l-4 border-l-tier-nudge p-4
            animate-slide-in bg-amber-50/50;
   }
 
-  /* ─── Step-Up Modal Overlay ─────────────────────────── */
   .stepup-overlay {
     @apply fixed inset-0 z-50 flex items-center justify-center
            bg-black/60 backdrop-blur-sm;
@@ -116,7 +109,6 @@
            border-t-4 border-t-tier-stepup animate-slide-in;
   }
 
-  /* ─── Service Icons ─────────────────────────────────── */
   .service-icon {
     @apply w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm;
   }

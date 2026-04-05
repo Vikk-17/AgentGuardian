@@ -1,4 +1,3 @@
-// agent/src/auth/resolveActingUser.ts
 // Dynamically resolves the Auth0 user ID the agent should act on behalf of.
 // Calls GET /api/v1/agent/whoami — no hardcoded user ID needed in .env.
 

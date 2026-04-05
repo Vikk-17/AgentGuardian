@@ -1,5 +1,4 @@
-// agent/src/auth/getAgentToken.ts
-// M2M Client Credentials Flow (Section 16.1.3)
+// M2M Client Credentials Flow
 
 interface AgentTokenCache {
   token: string;

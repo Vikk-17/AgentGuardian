@@ -1,4 +1,3 @@
-// src/app.ts — Express app configuration
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -16,7 +15,6 @@ import auditRoutes from './routes/audit';
 
 const app = express();
 
-// ─── Global Middleware ──────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin: env.FRONTEND_URL,
@@ -32,7 +30,6 @@ app.use(generalLimiter);
 // Trust proxy (for Railway/Vercel)
 app.set('trust proxy', 1);
 
-// ─── Routes ─────────────────────────────────────────────
 // Health check (no auth prefix)
 // app.use('/api/v1', authRoutes);
 
@@ -43,7 +40,6 @@ app.use('/api/v1/permissions', permissionRoutes);
 app.use('/api/v1/agent', agentRoutes);
 app.use('/api/v1/audit', auditRoutes);
 
-// ─── Error Handler ──────────────────────────────────────
 app.use(errorHandler);
 
 export default app;

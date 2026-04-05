@@ -1,4 +1,3 @@
-// src/routes/permissions.ts — Permission Configuration Routes
 import { Router, Request, Response } from 'express';
 import { requireAuth, getUserId } from '../middleware/auth';
 import { prisma } from '../lib/prisma';

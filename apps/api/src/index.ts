@@ -1,4 +1,3 @@
-// src/index.ts — Entry point: creates app + httpServer
 import { createServer } from 'http';
 import app from './app';
 import { setupSocketIO } from './socket';

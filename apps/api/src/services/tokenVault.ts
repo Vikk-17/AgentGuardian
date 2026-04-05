@@ -1,4 +1,3 @@
-// src/services/tokenVault.ts — Token Vault wrapper with error handling (Section 16.7)
 import { auth0Management } from '../config/auth0';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';

@@ -1,4 +1,3 @@
-// src/services/tierClassifier.ts — Tier Classification Logic (Section 8.4)
 import { prisma } from '../lib/prisma';
 import { ActionTier, DEFAULT_TIER_MAP } from '@agent-guardian/shared';
 import { logger } from '../lib/logger';

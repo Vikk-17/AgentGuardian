@@ -1,6 +1,5 @@
 import { ActionTier, ServiceType } from '../types/actions';
 
-// ─── Action Descriptions ────────────────────────────────
 export const ACTION_DESCRIPTIONS: Record<string, string> = {
   // Gmail
   'gmail.read_emails': 'List and read unread/recent emails',
@@ -42,7 +41,6 @@ export const ACTION_DESCRIPTIONS: Record<string, string> = {
   'notion.share_page': 'Change sharing settings of a page',
 };
 
-// ─── Default Tier Mappings (Section 13) ─────────────────
 export const DEFAULT_TIER_MAP: Record<string, Record<string, ActionTier>> = {
   [ServiceType.GMAIL]: {
     'gmail.read_emails': ActionTier.AUTO,
@@ -85,7 +83,6 @@ export const DEFAULT_TIER_MAP: Record<string, Record<string, ActionTier>> = {
   },
 };
 
-// ─── All Known Actions Per Service ──────────────────────
 export const SERVICE_ACTIONS: Record<ServiceType, string[]> = {
   [ServiceType.GMAIL]: Object.keys(DEFAULT_TIER_MAP[ServiceType.GMAIL]),
   [ServiceType.GITHUB]: Object.keys(DEFAULT_TIER_MAP[ServiceType.GITHUB]),
@@ -93,7 +90,6 @@ export const SERVICE_ACTIONS: Record<ServiceType, string[]> = {
   [ServiceType.NOTION]: Object.keys(DEFAULT_TIER_MAP[ServiceType.NOTION]),
 };
 
-// ─── Nudge Config ───────────────────────────────────────
 export const NUDGE_TIMEOUT_MS = 60_000; // 60 seconds
 export const NUDGE_POLL_INTERVAL_MS = 3_000;
 export const AGENT_TOKEN_LIFETIME_S = 300; // 5 minutes

@@ -1,4 +1,3 @@
-// src/socket.ts — Socket.io server setup
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { env } from './config/env';

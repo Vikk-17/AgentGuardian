@@ -1,6 +1,5 @@
 import { ActionTier, ServiceType } from './actions';
 
-// ─── Permission Config ──────────────────────────────────
 export interface PermissionConfig {
   id: string;
   userId: string;
@@ -11,14 +10,12 @@ export interface PermissionConfig {
   updatedAt: string;
 }
 
-// ─── Permission Config Input (for upsert) ───────────────
 export interface PermissionConfigInput {
   service: ServiceType;
   actionType: string;
   tier: ActionTier;
 }
 
-// ─── Permission Rule (display) ──────────────────────────
 export interface PermissionRule {
   service: ServiceType;
   actionType: string;
@@ -28,7 +25,6 @@ export interface PermissionRule {
   isCustom: boolean;
 }
 
-// ─── Socket Events ──────────────────────────────────────
 export interface SocketEvents {
   'activity:new': { auditLog: import('./audit').AuditLogEntry };
   'nudge:request': { pendingAction: import('./audit').PendingActionEntry };

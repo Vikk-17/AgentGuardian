@@ -1,4 +1,3 @@
-// ─── Service Types ──────────────────────────────────────
 export enum ServiceType {
   GMAIL = 'GMAIL',
   GITHUB = 'GITHUB',
@@ -6,14 +5,12 @@ export enum ServiceType {
   NOTION = 'NOTION',
 }
 
-// ─── Action Tiers ───────────────────────────────────────
 export enum ActionTier {
   AUTO = 'AUTO',
   NUDGE = 'NUDGE',
   STEP_UP = 'STEP_UP',
 }
 
-// ─── Action Intent ──────────────────────────────────────
 // Submitted by the agent when requesting an action
 export interface ActionIntent {
   service: ServiceType;
@@ -22,7 +19,6 @@ export interface ActionIntent {
   displaySummary: string;
 }
 
-// ─── Action Response Statuses ───────────────────────────
 export type ActionResponseStatus =
   | 'EXECUTED'
   | 'PENDING_APPROVAL'
@@ -32,7 +28,6 @@ export type ActionResponseStatus =
   | 'EXPIRED'
   | 'FAILED';
 
-// ─── Action Response ────────────────────────────────────
 export interface ActionResponse {
   tier: ActionTier;
   status: ActionResponseStatus;
@@ -44,7 +39,6 @@ export interface ActionResponse {
   data?: unknown;
 }
 
-// ─── Nudge Job States ───────────────────────────────────
 export type NudgeStatus =
   | 'PENDING_APPROVAL'
   | 'APPROVED'
@@ -53,7 +47,6 @@ export type NudgeStatus =
   | 'EXECUTED'
   | 'FAILED';
 
-// ─── Service Connection Map ─────────────────────────────
 export const SERVICE_CONNECTION_MAP: Record<ServiceType, string> = {
   [ServiceType.GMAIL]: 'google-gmail',
   [ServiceType.GITHUB]: 'github',
@@ -61,7 +54,6 @@ export const SERVICE_CONNECTION_MAP: Record<ServiceType, string> = {
   [ServiceType.NOTION]: 'notion',
 };
 
-// ─── Service Display Names ──────────────────────────────
 export const SERVICE_DISPLAY_NAMES: Record<ServiceType, string> = {
   [ServiceType.GMAIL]: 'Gmail',
   [ServiceType.GITHUB]: 'GitHub',
@@ -69,7 +61,6 @@ export const SERVICE_DISPLAY_NAMES: Record<ServiceType, string> = {
   [ServiceType.NOTION]: 'Notion',
 };
 
-// ─── Tier Emoji Map ─────────────────────────────────────
 export const TIER_EMOJI: Record<ActionTier, string> = {
   [ActionTier.AUTO]: '🟢',
   [ActionTier.NUDGE]: '🟡',

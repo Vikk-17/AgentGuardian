@@ -1,4 +1,3 @@
-// src/routes/audit.ts — Audit Log Routes
 import { Router, Request, Response } from 'express';
 import { requireAuth, getUserId } from '../middleware/auth';
 import { getAuditLogs, getAuditStats } from '../services/auditService';

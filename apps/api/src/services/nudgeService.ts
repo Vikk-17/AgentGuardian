@@ -1,4 +1,3 @@
-// src/services/nudgeService.ts — BullMQ job lifecycle for NUDGE tier
 import { prisma } from '../lib/prisma';
 import { nudgeQueue } from '../lib/queue';
 import { logger } from '../lib/logger';

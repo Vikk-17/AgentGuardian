@@ -1,4 +1,3 @@
-// src/workers/nudgeWorker.ts — BullMQ worker for nudge timeouts
 import { Worker, Job } from 'bullmq';
 import { redis } from '../lib/redis';
 import { prisma } from '../lib/prisma';

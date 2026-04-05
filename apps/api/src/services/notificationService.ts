@@ -1,4 +1,3 @@
-// src/services/notificationService.ts — Multi-channel notifications (Section 16.5)
 import { prisma } from '../lib/prisma';
 import { sendPushNotification } from '../lib/webPush';
 import { logger } from '../lib/logger';
@@ -22,7 +21,7 @@ export interface NotifyParams {
   };
 }
 
-// Three-layer notification approach (Section 16.5.1)
+// Three-layer notification approach
 export async function notifyUser(params: NotifyParams) {
   const { userId, pendingAction } = params;
 

@@ -1,4 +1,3 @@
-// src/services/orchestrator.ts — Core tier routing logic (Section 3.2.3)
 import { classifyTier } from './tierClassifier';
 import { createAuditLog } from './auditService';
 import { createNudgeAction } from './nudgeService';
@@ -69,7 +68,6 @@ export async function orchestrateAction(
   }
 }
 
-// ─── AUTO Tier — Silent Execution ───────────────────────
 async function handleAutoTier(
   params: OrchestrateActionParams,
   payloadHash: string
@@ -136,7 +134,6 @@ async function handleAutoTier(
   }
 }
 
-// ─── NUDGE Tier — Async Approval ────────────────────────
 async function handleNudgeTier(
   params: OrchestrateActionParams,
   payloadHash: string
@@ -182,7 +179,6 @@ async function handleNudgeTier(
   };
 }
 
-// ─── STEP-UP Tier — MFA Gate ────────────────────────────
 async function handleStepUpTier(
   params: OrchestrateActionParams,
   payloadHash: string
@@ -229,7 +225,6 @@ async function handleStepUpTier(
   };
 }
 
-// ─── Execute Approved Action (called after approval) ────
 export async function executeApprovedAction(
   pendingActionId: string,
   approvedByUserId?: string,

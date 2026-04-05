@@ -1,4 +1,3 @@
-// src/routes/agent.ts — Agent Action Routes (Section 6.4)
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireScope } from '../middleware/auth';
 import { requireAgentAuth, getActingUserId, getAgentId } from '../middleware/agentAuth';
@@ -14,7 +13,6 @@ import { z } from 'zod';
 
 const router = Router();
 
-// ─── Zod Schemas (Section 11.4) ─────────────────────────
 const actionIntentSchema = z.object({
   service: z.enum(['gmail', 'github', 'slack', 'notion']),
   actionType: z.string().min(1).max(100).regex(/^[a-z_.]+$/),

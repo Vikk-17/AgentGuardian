@@ -1,4 +1,3 @@
-// src/services/auditService.ts — Immutable Audit Log writes
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 

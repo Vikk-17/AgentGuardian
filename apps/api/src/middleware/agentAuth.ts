@@ -1,4 +1,3 @@
-// src/middleware/agentAuth.ts — Agent Identity (Section 16.1.4)
 import { Request, Response, NextFunction } from 'express';
 import { auth0Management } from '../config/auth0';
 import { prisma } from '../lib/prisma';

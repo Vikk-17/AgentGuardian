@@ -1,5 +1,4 @@
-// agent/src/guardian/waitForApproval.ts
-// Polling protocol with exponential backoff (Section 16.6)
+// Polling protocol with exponential backoff
 
 const GUARDIAN_API = process.env.GUARDIAN_API_URL || 'http://localhost:3001';
 

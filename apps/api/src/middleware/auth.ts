@@ -1,4 +1,3 @@
-// src/middleware/auth.ts — WITH JWKS CACHING (Section 16.2 + 16.3)
 import { auth } from 'express-oauth2-jwt-bearer';
 import { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env';

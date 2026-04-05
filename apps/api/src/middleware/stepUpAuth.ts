@@ -1,4 +1,3 @@
-// src/middleware/stepUpAuth.ts — ACR Claim Verification (Section 4.5.1)
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';

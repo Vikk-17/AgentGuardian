@@ -1,4 +1,3 @@
-// src/services/executors/index.ts — Service action executor dispatcher
 import { executeGmailAction } from './gmail';
 import { executeGithubAction } from './github';
 import { executeSlackAction } from './slack';

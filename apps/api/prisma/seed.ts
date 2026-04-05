@@ -1,4 +1,3 @@
-// prisma/seed.ts — Database seed script for demo data
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

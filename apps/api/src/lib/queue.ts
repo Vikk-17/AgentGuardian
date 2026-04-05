@@ -1,7 +1,6 @@
 import { Queue } from 'bullmq';
 import { redis } from './redis';
 
-// ─── Nudge Action Queue ─────────────────────────────────
 // Handles async approval flow for NUDGE tier actions
 export const nudgeQueue = new Queue('nudge-actions', {
   connection: redis,
@@ -12,7 +11,6 @@ export const nudgeQueue = new Queue('nudge-actions', {
   },
 });
 
-// ─── Action Execution Queue ─────────────────────────────
 // Handles the actual execution of approved actions
 export const executionQueue = new Queue('action-execution', {
   connection: redis,
