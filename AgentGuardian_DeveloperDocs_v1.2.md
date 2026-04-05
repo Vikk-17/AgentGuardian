@@ -1,27 +1,60 @@
 # Agent Guardian Developer Docs v1.2
 
-Updated for the current codebase in `/home/sc/AgentGurdian`  
-April 2026
+**Audience:** Engineers who already have the app running and need **architecture, data flow, and code pointers** — not step-by-step onboarding.
+
+**Pair with:** [README.md](README.md) for first-time setup, CLI usage, and troubleshooting.
+
+**Last updated:** April 2026 (repo root)
+
+---
+
+## Contents
+
+1. [Overview](#1-overview)
+2. [Monorepo layout](#2-monorepo-layout)
+3. [Technology stack](#3-current-technology-stack)
+4. [Runtime architecture](#4-high-level-runtime-architecture)
+5. [Core domain model](#5-core-domain-model)
+6. [Action and tier model](#6-action-and-tier-model)
+7. [Request lifecycles](#7-request-lifecycles)
+8. [Auth model](#8-auth-model)
+9. [API surface](#9-api-surface)
+10. [Real-time events](#10-real-time-events)
+11. [Supported service actions](#11-supported-service-actions)
+12. [Environment variables](#12-environment-variables)
+13. [Local development workflow](#13-local-development-workflow)
+14. [Testing and CI](#14-testing-and-ci)
+15. [Implementation notes and caveats](#15-current-implementation-notes-and-caveats)
+16. [Recommended reading](#16-recommended-reading-in-this-repo)
+17. [Connecting services & Auth0 Token Vault](#17-connecting-services--auth0-token-vault)
+18. [Production agent: Auth0 M2M Action](#18-production-agent-auth0-m2m-action)
+19. [Acting user resolution (implementation notes)](#19-acting-user-resolution-implementation-notes)
+20. [Production deployment outline](#20-production-deployment-outline)
+21. [Summary](#21-summary)
+
+---
 
 ## 1. Overview
 
 Agent Guardian is a full-stack TypeScript monorepo that adds a trust and approval layer between an AI agent and user-connected services. The system receives an action request, classifies it into one of three tiers, and then either executes immediately, waits for user approval, or requires MFA-backed confirmation.
 
-The implemented tiers are:
+| Tier | Behavior |
+|------|----------|
+| `AUTO` | Execute immediately |
+| `NUDGE` | Wait for user approval within a **60-second** window |
+| `STEP_UP` | Require MFA-aware confirmation before execution |
 
-- `AUTO`: execute immediately
-- `NUDGE`: wait for user approval within a 60-second window
-- `STEP_UP`: require MFA-aware confirmation before execution
+**Runtime surfaces**
 
-The current repo contains three main runtime surfaces:
+| Path | Role |
+|------|------|
+| `apps/web` | React dashboard |
+| `apps/api` | Express API and orchestration |
+| `agent` | CLI agent that calls the API |
 
-- `apps/web`: React dashboard
-- `apps/api`: Express API and orchestration layer
-- `agent`: CLI agent that talks to the API
+---
 
-For day-to-day local setup and CLI usage, use [README.md](/home/sc/AgentGurdian/README.md) as the primary onboarding document. This developer doc is intended to stay implementation-focused.
-
-## 2. Monorepo Layout
+## 2. Monorepo layout
 
 ```text
 .
@@ -38,60 +71,50 @@ For day-to-day local setup and CLI usage, use [README.md](/home/sc/AgentGurdian/
 └── docs
 ```
 
-Key files:
+**Primary code entry points**
 
-- `apps/api/src/app.ts`: Express app and route mounting
-- `apps/api/src/routes/*.ts`: public API surface
-- `apps/api/src/services/orchestrator.ts`: tier routing and execution flow
-- `apps/api/prisma/schema.prisma`: persistence model
-- `packages/shared/src/constants/defaults.ts`: default action tiers and action catalog
-- `agent/src/index.ts`: CLI loop and tool execution
+| File | Responsibility |
+|------|----------------|
+| `apps/api/src/app.ts` | Express app and route mounting |
+| `apps/api/src/routes/*.ts` | HTTP API |
+| `apps/api/src/services/orchestrator.ts` | Tier routing and execution flow |
+| `apps/api/prisma/schema.prisma` | Persistence model |
+| `packages/shared/src/constants/defaults.ts` | Default tiers and action catalog |
+| `agent/src/index.ts` | CLI loop and tool execution |
 
-## 3. Current Technology Stack
+---
+
+## 3. Current technology stack
 
 ### Frontend
 
-- React 18
-- Vite
-- TypeScript
-- Tailwind CSS
-- TanStack Query
-- Zustand
-- `@auth0/auth0-react`
-- `socket.io-client`
+- React 18, Vite, TypeScript, Tailwind CSS
+- TanStack Query, Zustand
+- `@auth0/auth0-react`, `socket.io-client`
 
 ### Backend
 
-- Node.js
-- Express
-- TypeScript
-- Prisma
-- PostgreSQL
-- Redis
-- BullMQ
-- Socket.IO
-- Zod
-- Winston
-- `express-oauth2-jwt-bearer`
-- Auth0 Node SDK
+- Node.js, Express, TypeScript, Prisma, PostgreSQL
+- Redis, BullMQ, Socket.IO, Zod, Winston
+- `express-oauth2-jwt-bearer`, Auth0 Node SDK
 
 ### Agent
 
-- TypeScript
-- OpenAI Node SDK
-- OpenRouter-compatible chat completions endpoint
+- TypeScript, OpenAI Node SDK → OpenRouter-compatible chat completions
 
-### Local Infrastructure
+### Local infrastructure
 
-- `docker-compose.yml` for PostgreSQL and Redis
+- `docker-compose.yml` — PostgreSQL and Redis
 
-Notes on drift from the older internal draft:
+**Drift vs. older internal drafts**
 
-- The repo does not currently use `shadcn/ui`
-- The agent does not currently use Vercel AI SDK or LangChain
-- No CI workflow is checked into this repo today
+- The repo does not use `shadcn/ui`.
+- The agent does not use Vercel AI SDK or LangChain.
+- **CI:** GitHub Actions runs on every push and PR (see [§14](#14-testing-and-ci)).
 
-## 4. High-Level Runtime Architecture
+---
+
+## 4. High-level runtime architecture
 
 ```text
 User Browser -> Auth0 -> React Dashboard
@@ -110,171 +133,142 @@ User Browser -> Auth0 -> React Dashboard
 CLI Agent -> Auth0 M2M token -> Express API -> third-party service executors
 ```
 
-Service executors are implemented for:
+**Service executors:** Gmail, GitHub, Slack, Notion.
 
-- Gmail
-- GitHub
-- Slack
-- Notion
+---
 
-## 5. Core Domain Model
+## 5. Core domain model
 
-The persistence model lives in [apps/api/prisma/schema.prisma](/home/sc/AgentGurdian/apps/api/prisma/schema.prisma).
+Defined in [apps/api/prisma/schema.prisma](apps/api/prisma/schema.prisma).
 
 ### `User`
 
-Stores the local user record keyed by `auth0UserId`. The dashboard creates or refreshes this record through `GET /api/v1/auth/me`.
+Local user keyed by `auth0UserId`. Created or refreshed via `GET /api/v1/auth/me` after dashboard login.
 
 ### `ServiceConnection`
 
-Stores whether a service is connected or revoked for a user. It does not store raw OAuth tokens.
+Connection or revoked state per user. **Does not** store raw OAuth tokens.
 
 ### `PermissionConfig`
 
-Stores user overrides for `(user, service, actionType) -> tier`.
+User overrides for `(user, service, actionType) → tier`.
 
 ### `AuditLog`
 
-Immutable execution history containing:
-
-- service
-- action type
-- tier
-- outcome status
-- payload hash
-- approver metadata
-- step-up verification flag
+Immutable history: service, action type, tier, outcome, payload hash, approver metadata, step-up verification flag.
 
 ### `PendingAction`
 
-Tracks `NUDGE` and `STEP_UP` actions that are waiting for resolution.
+Tracks `NUDGE` and `STEP_UP` actions awaiting resolution.
 
-## 6. Action and Tier Model
+---
 
-The canonical action list and default mappings live in [packages/shared/src/constants/defaults.ts](/home/sc/AgentGurdian/packages/shared/src/constants/defaults.ts).
+## 6. Action and tier model
 
-Examples:
+Canonical actions and default tiers: [packages/shared/src/constants/defaults.ts](packages/shared/src/constants/defaults.ts).
 
-- GitHub reads default to `AUTO`
-- GitHub issue/PR creation defaults to `NUDGE`
-- GitHub merge/delete operations default to `STEP_UP`
-- Unknown actions default to `STEP_UP` in `classifyTier()` as a fail-safe
+**Examples**
 
-The classifier order is:
+- GitHub reads → often `AUTO`
+- GitHub issue/PR creation → often `NUDGE`
+- GitHub merge/delete → often `STEP_UP`
+- Unknown actions → `STEP_UP` in `classifyTier()` (fail-safe)
 
-1. Look for a user-specific `PermissionConfig`
-2. Fall back to `DEFAULT_TIER_MAP`
-3. Default unknown actions to `STEP_UP`
+**Classifier order**
 
-## 7. Request Lifecycles
+1. User-specific `PermissionConfig`
+2. `DEFAULT_TIER_MAP`
+3. Unknown → `STEP_UP`
+
+---
+
+## 7. Request lifecycles
 
 ### 7.1 `AUTO`
 
-Implemented in `handleAutoTier()` in [apps/api/src/services/orchestrator.ts](/home/sc/AgentGurdian/apps/api/src/services/orchestrator.ts).
+Implemented in `handleAutoTier()` in [apps/api/src/services/orchestrator.ts](apps/api/src/services/orchestrator.ts).
 
-Flow:
+1. Classify the action  
+2. Fetch a short-lived service token  
+3. Execute the provider action  
+4. Write an `EXECUTED` audit log  
+5. Emit a Socket.IO activity update  
 
-1. Classify the action
-2. Fetch a short-lived service token
-3. Execute the provider action
-4. Write an `EXECUTED` audit log
-5. Emit a Socket.IO activity update
+If token retrieval fails:
 
-If token retrieval fails with a known service-connection problem:
-
-- `404` becomes `ServiceNotConnectedError`
-- `401` becomes `TokenExpiredError` and marks the connection as revoked
+- `404` → `ServiceNotConnectedError`
+- `401` → `TokenExpiredError` and connection marked revoked
 
 ### 7.2 `NUDGE`
 
 Implemented across:
 
-- [apps/api/src/services/orchestrator.ts](/home/sc/AgentGurdian/apps/api/src/services/orchestrator.ts)
-- [apps/api/src/services/nudgeService.ts](/home/sc/AgentGurdian/apps/api/src/services/nudgeService.ts)
-- [apps/api/src/workers/nudgeWorker.ts](/home/sc/AgentGurdian/apps/api/src/workers/nudgeWorker.ts)
+- [apps/api/src/services/orchestrator.ts](apps/api/src/services/orchestrator.ts)
+- [apps/api/src/services/nudgeService.ts](apps/api/src/services/nudgeService.ts)
+- [apps/api/src/workers/nudgeWorker.ts](apps/api/src/workers/nudgeWorker.ts)
 
-Flow:
-
-1. Create `PendingAction`
-2. Hash the payload
-3. Store the payload in Redis at `nudge:payload:<jobId>` with a 70-second TTL
-4. Schedule a BullMQ timeout job with a 60-second delay
-5. Notify the dashboard through Socket.IO and optional web push
-6. Write a `PENDING` audit log
-7. On approval, execute the real action and write `EXECUTED`
-8. On denial, write `DENIED`
-9. On timeout, mark expired and write `EXPIRED`
+1. Create `PendingAction`  
+2. Hash the payload  
+3. Store payload in Redis: `nudge:payload:<jobId>` (~70s TTL)  
+4. BullMQ job with **60s** delay  
+5. Socket.IO (+ optional web push)  
+6. `PENDING` audit log  
+7. Approve → execute → `EXECUTED`; deny → `DENIED`; timeout → `EXPIRED`  
 
 ### 7.3 `STEP_UP`
 
-Implemented in [apps/api/src/services/orchestrator.ts](/home/sc/AgentGurdian/apps/api/src/services/orchestrator.ts) and [apps/api/src/middleware/stepUpAuth.ts](/home/sc/AgentGurdian/apps/api/src/middleware/stepUpAuth.ts).
+Implemented in [apps/api/src/services/orchestrator.ts](apps/api/src/services/orchestrator.ts) and [apps/api/src/middleware/stepUpAuth.ts](apps/api/src/middleware/stepUpAuth.ts).
 
-Flow:
+1. Create `PendingAction` with a **5-minute** window  
+2. Persist payload in Redis if needed  
+3. Return `challengeUrl` (e.g. `/step-up?jobId=...`)  
+4. Frontend completes step-up UX → `POST /api/v1/agent/action/:jobId/step-up`  
+5. Middleware validates MFA-related claims before execution  
+6. Success writes audit with `stepUpVerified = true`  
 
-1. Create `PendingAction` with a 5-minute window
-2. Persist payload in Redis if needed
-3. Return a frontend `challengeUrl` like `/step-up?jobId=<id>`
-4. Frontend completes the step-up UX and posts to `/api/v1/agent/action/:jobId/step-up`
-5. Middleware checks MFA-related claims before allowing execution
-6. Approved execution writes an audit row with `stepUpVerified = true`
+**Development:** `requireStepUp()` may include a **fresh-token bypass** when Auth0 MFA claims are missing — **local demos only**, not a production guarantee.
 
-Important implementation detail:
+---
 
-- In development, `requireStepUp()` contains a fresh-token bypass if Auth0 MFA claims are missing. That makes local demos possible, but it should be treated as a development-only path.
+## 8. Auth model
 
-## 8. Auth Model
+### 8.1 Dashboard login
 
-### 8.1 Dashboard Login
+`@auth0/auth0-react`: Universal Login, Authorization Code + PKCE, in-memory token cache, refresh tokens enabled.
 
-The frontend uses `@auth0/auth0-react` with:
+After login, `/api/v1/auth/me` upserts the local user and refreshes `updatedAt` (used for **dev** agent user resolution).
 
-- Auth0 Universal Login
-- Authorization Code Flow with PKCE
-- in-memory token cache
-- refresh token support enabled in the SDK config
+### 8.2 API JWT validation
 
-After login, the app calls `/api/v1/auth/me` to create or refresh the local user row. This also updates `updatedAt`, which is important for development-mode agent resolution.
+[apps/api/src/middleware/auth.ts](apps/api/src/middleware/auth.ts) — `express-oauth2-jwt-bearer`.
 
-### 8.2 API JWT Validation
+### 8.3 CLI agent authentication
 
-The API uses `express-oauth2-jwt-bearer` in [apps/api/src/middleware/auth.ts](/home/sc/AgentGurdian/apps/api/src/middleware/auth.ts) to validate Auth0-issued JWTs.
+- Client credentials: [agent/src/auth/getAgentToken.ts](agent/src/auth/getAgentToken.ts), scope `agent:act`
+- Acting user: [agent/src/auth/resolveActingUser.ts](agent/src/auth/resolveActingUser.ts)
+  - **Production:** M2M token must include the custom claim keyed by `USER_ID_CLAIM` in [apps/api/src/middleware/agentAuth.ts](apps/api/src/middleware/agentAuth.ts) (same string as in your Auth0 Action)
+  - **Development:** most recently active dashboard user
+  - **GitHub:** when run inside another git repo, ambient context from `remote.origin.url` helps resolve “this repo” style phrases
+- Resolution endpoint: `GET /api/v1/agent/whoami`
 
-### 8.3 CLI Agent Authentication
+### 8.4 Service connection and token retrieval
 
-The CLI agent uses the client credentials grant in [agent/src/auth/getAgentToken.ts](/home/sc/AgentGurdian/agent/src/auth/getAgentToken.ts) and requests the `agent:act` scope.
+- `GET /api/v1/connections/:service/authorize`, callback, `DELETE` for disconnect
 
-Current acting-user resolution in [agent/src/auth/resolveActingUser.ts](/home/sc/AgentGurdian/agent/src/auth/resolveActingUser.ts):
+Token retrieval: [apps/api/src/services/tokenVault.ts](apps/api/src/services/tokenVault.ts)
 
-- Production path: read `https://agentguardian.com/userId` from the M2M token
-- Development path: fall back to the most recently active dashboard user
-- When launched inside another git repository, the CLI also derives ambient GitHub repository context from `remote.origin.url` to help resolve phrases like `this repo`
+1. Map internal user → `auth0UserId`  
+2. Try `auth0Management.tokenVault.getToken(...)`  
+3. If unavailable, fallback via Management API user fetch + identity token  
+4. Clear errors if token missing or service not connected  
 
-The resolution endpoint is:
+The code targets Token Vault semantics but includes a **Management API fallback** for real SDK behavior.
 
-- `GET /api/v1/agent/whoami`
+---
 
-### 8.4 Service Connection and Token Retrieval
+## 9. API surface
 
-Connections are initiated through the API:
-
-- `GET /api/v1/connections/:service/authorize`
-- `GET /api/v1/connections/callback`
-- `DELETE /api/v1/connections/:service`
-
-Token retrieval happens in [apps/api/src/services/tokenVault.ts](/home/sc/AgentGurdian/apps/api/src/services/tokenVault.ts).
-
-Current behavior:
-
-1. Resolve the internal user ID to `auth0UserId`
-2. Attempt `auth0Management.tokenVault.getToken(...)`
-3. If the SDK method is unavailable, fall back to `auth0Management.users.get(...)` and read the matching identity access token
-4. Throw a clean service error if the token is unavailable or the service is not connected
-
-This means the code is written for Token Vault-style retrieval, but it also includes a pragmatic fallback for current Auth0 SDK behavior.
-
-## 9. API Surface
-
-The routes are mounted in [apps/api/src/app.ts](/home/sc/AgentGurdian/apps/api/src/app.ts).
+Routes mounted in [apps/api/src/app.ts](apps/api/src/app.ts).
 
 ### Auth
 
@@ -314,104 +308,64 @@ The routes are mounted in [apps/api/src/app.ts](/home/sc/AgentGurdian/apps/api/s
 - `GET /api/v1/audit/stats`
 - `GET /api/v1/audit/:auditLogId`
 
-## 10. Real-Time Events
+---
 
-Socket.IO is initialized in [apps/api/src/socket.ts](/home/sc/AgentGurdian/apps/api/src/socket.ts).
+## 10. Real-time events
 
-The server emits dashboard update events including:
+Server: [apps/api/src/socket.ts](apps/api/src/socket.ts)  
+Client: [apps/web/src/lib/socket.ts](apps/web/src/lib/socket.ts) — `join` with Auth0 `sub`.
 
-- `activity:new`
-- `nudge:request`
-- `nudge:resolved`
-- `nudge:expired`
-- `stepup:required`
-- `stepup:completed`
-- `connection:revoked`
+**Server → dashboard (examples)**
 
-The web client connects through [apps/web/src/lib/socket.ts](/home/sc/AgentGurdian/apps/web/src/lib/socket.ts) and emits a `join` event using the Auth0 `sub` claim from the logged-in user session.
+- `activity:new`, `nudge:request`, `nudge:resolved`, `nudge:expired`
+- `stepup:required`, `stepup:completed`, `connection:revoked`
 
-## 11. Supported Service Actions
+---
+
+## 11. Supported service actions
 
 ### Gmail
 
-- `gmail.read_emails`
-- `gmail.search_emails`
-- `gmail.read_attachments`
-- `gmail.send_email`
-- `gmail.reply_email`
-- `gmail.send_to_external`
-- `gmail.delete_email`
-- `gmail.send_bulk`
+`gmail.read_emails`, `gmail.search_emails`, `gmail.read_attachments`, `gmail.send_email`, `gmail.reply_email`, `gmail.send_to_external`, `gmail.delete_email`, `gmail.send_bulk`
 
 ### GitHub
 
-- `github.read_repositories`
-- `github.read_issues`
-- `github.read_prs`
-- `github.read_code`
-- `github.read_branches`
-- `github.create_issue`
-- `github.comment_issue`
-- `github.open_pr`
-- `github.merge_pr`
-- `github.merge_to_main`
-- `github.push_code`
-- `github.delete_branch`
-- `github.close_issue`
+`github.read_repositories`, `github.read_issues`, `github.read_prs`, `github.read_code`, `github.read_branches`, `github.create_issue`, `github.comment_issue`, `github.open_pr`, `github.merge_pr`, `github.merge_to_main`, `github.push_code`, `github.delete_branch`, `github.close_issue`
 
 ### Slack
 
-- `slack.read_channels`
-- `slack.read_dms`
-- `slack.post_to_channel`
-- `slack.send_dm`
-- `slack.post_to_general`
-- `slack.create_channel`
+`slack.read_channels`, `slack.read_dms`, `slack.post_to_channel`, `slack.send_dm`, `slack.post_to_general`, `slack.create_channel`
 
 ### Notion
 
-- `notion.read_pages`
-- `notion.update_page`
-- `notion.create_page`
-- `notion.delete_page`
-- `notion.share_page`
+`notion.read_pages`, `notion.update_page`, `notion.create_page`, `notion.delete_page`, `notion.share_page`
 
-Implementation notes:
+**Caveats**
 
-- `github.push_code` is currently a placeholder and does not perform real git transport
-- `notion.share_page` currently returns a note rather than performing a workspace-sharing mutation
+- `github.push_code` — placeholder; no real git transport  
+- `notion.share_page` — may return an informational response rather than a full workspace share mutation  
 
-## 12. Environment Variables
+---
 
-The root example file is [/.env.example](/home/sc/AgentGurdian/.env.example). The agent has its own [agent/.env.example](/home/sc/AgentGurdian/agent/.env.example).
+## 12. Environment variables
 
-Important variables include:
+- Root template: [.env.example](.env.example) (copy to `apps/api/.env` and `apps/web/.env`)
+- Agent: [agent/.env.example](agent/.env.example)
 
-- `DATABASE_URL`
-- `REDIS_URL`
-- `AUTH0_DOMAIN`
-- `AUTH0_AUDIENCE`
-- `AUTH0_CLIENT_ID`
-- `AUTH0_M2M_CLIENT_ID`
-- `AUTH0_M2M_CLIENT_SECRET`
-- `FRONTEND_URL`
-- `API_BASE_URL`
-- `VITE_AUTH0_DOMAIN`
-- `VITE_AUTH0_CLIENT_ID`
-- `VITE_AUTH0_AUDIENCE`
-- `VITE_API_BASE_URL`
-- `VITE_SOCKET_URL`
-- `AGENT_AUTH0_CLIENT_ID`
-- `AGENT_AUTH0_CLIENT_SECRET`
-- `GUARDIAN_API_URL`
-- `OPENROUTER_API_KEY`
-- `OPENROUTER_MODEL`
+**Commonly required**
 
-## 13. Local Development Workflow
+- `DATABASE_URL`, `REDIS_URL`
+- `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AUTH0_CLIENT_ID`, `AUTH0_M2M_CLIENT_ID`, `AUTH0_M2M_CLIENT_SECRET`
+- `FRONTEND_URL`, web `VITE_*` URLs and Auth0 IDs
+- Agent: `AGENT_AUTH0_CLIENT_ID`, `AGENT_AUTH0_CLIENT_SECRET`, `GUARDIAN_API_URL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`
 
-The full operator-friendly startup guide now lives in [README.md](/home/sc/AgentGurdian/README.md). The notes below summarize the implementation-aware sequence.
+The root `.env.example` may also document optional dev overrides (e.g. acting-user hints for demos). Binding rules for the CLI user are covered in [README.md](README.md) and [§18–§19](#18-production-agent-auth0-m2m-action) below.
 
-### Start the stack
+---
+
+## 13. Local development workflow
+
+Operator steps live in [README.md](README.md). Minimal sequence:
 
 ```bash
 npm install
@@ -424,61 +378,186 @@ npm run db:seed
 npm run dev
 ```
 
-### Start the agent
-
-In a second terminal:
+Agent (second terminal):
 
 ```bash
 npm run dev -w agent
 ```
 
-### Important development sequence
+**Order matters**
 
-1. Start API and web app
-2. Log into the dashboard once
-3. Connect at least one provider
-4. Start the CLI agent
+1. API + web running  
+2. Log in to the dashboard  
+3. Connect at least one provider  
+4. Start the CLI agent  
 
-If step 2 is skipped, the agent will not be able to resolve a user in development mode.
+Skipping step 2 breaks **development** user resolution for the agent.
 
-If you want the merged repo + CLI walkthrough, sample commands, or troubleshooting shortcuts, refer back to [README.md](/home/sc/AgentGurdian/README.md).
+---
 
-## 14. Current Implementation Notes and Caveats
+## 14. Testing and CI
 
-- The root `npm run dev` does not start the agent process
-- The health endpoint is mounted at `/api/v1/auth/health`
-- User creation is lazy and happens through `/auth/me`
-- Redis stores pending-action payloads temporarily, not long-lived credentials
-- PostgreSQL stores connection state and audit metadata, not raw provider tokens
-- Unknown action types intentionally fail closed to `STEP_UP`
-- The current codebase documents and implements Auth0-centric flows, but local success still depends on tenant configuration and available Management API capabilities
+| Command | Purpose |
+|---------|---------|
+| `npm run test` | Vitest (`--passWithNoTests` at root) |
+| `npm run lint` | ESLint on `.ts` / `.tsx` |
+| `npm run type-check` | Shared build + API + web `tsc --noEmit` |
 
-## 15. Recommended Reading in This Repo
+**GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): `npm ci` → build `packages/shared` → `type-check` → `lint` → `test` on **push** and **pull_request** (Node 20).
 
-- [README.md](/home/sc/AgentGurdian/README.md)
-- [docs/connecting-services.md](/home/sc/AgentGurdian/docs/connecting-services.md)
-- [docs/auth0-m2m-action-setup.md](/home/sc/AgentGurdian/docs/auth0-m2m-action-setup.md)
-- [docs/agent-dynamic-auth-changes.md](/home/sc/AgentGurdian/docs/agent-dynamic-auth-changes.md)
+---
 
-Use [README.md](/home/sc/AgentGurdian/README.md) for:
+## 15. Current implementation notes and caveats
 
-- local setup
-- CLI usage examples
-- repository-aware GitHub behavior
-- common troubleshooting
+- Root `npm run dev` does **not** start the agent.
+- Health check: `GET /api/v1/auth/health`.
+- User rows are lazy-created via `/auth/me`.
+- Redis holds short-lived pending payloads, not long-lived secrets.
+- PostgreSQL holds connection state and audit metadata, not raw provider tokens.
+- Unknown action types fail closed to `STEP_UP`.
+- End-to-end behavior depends on Auth0 tenant configuration and Management API capabilities.
 
-## 16. Summary
+---
 
-The current implementation is a working monorepo with:
+## 16. Recommended reading in this repo
 
-- a dashboard for login, permissions, connections, approvals, and audit history
-- an API that classifies and orchestrates service actions
-- a CLI agent that authenticates with Auth0 M2M, resolves an acting user, and submits actions through Guardian
+| Document | Use for |
+|----------|---------|
+| [README.md](README.md) | Setup, OAuth connections, CLI, acting user, troubleshooting |
+| This file (`AgentGuardian_DeveloperDocs_v1.2.md`) | Architecture, API, Token Vault, M2M Action, deployment, internals |
 
-The most important corrections from the previous internal draft are:
+---
 
-- the stack is simpler than originally described
-- the agent currently uses the OpenAI SDK against OpenRouter
-- dynamic acting-user resolution is already implemented
-- the Auth0 token retrieval path includes a Management API fallback
-- the documented API routes, storage model, and approval flows now match the code in this repo
+## 17. Connecting services & Auth0 Token Vault
+
+End users connect Gmail, GitHub, Slack, and Notion from the dashboard (**Connections**). The API stores **connection status** in PostgreSQL; **raw OAuth tokens are not persisted in the app DB**—tokens are obtained at runtime via Auth0 (Token Vault API when available, with a Management API fallback in [apps/api/src/services/tokenVault.ts](apps/api/src/services/tokenVault.ts)).
+
+**Auth0 dashboard (typical)**
+
+1. **Authentication → Social**: create or edit connections for GitHub, Google (Gmail), Slack, Notion as required.  
+2. Enable **Token Vault** (or your tenant’s equivalent) per connection so tokens remain manageable in Auth0.  
+3. Scopes (examples—align with your provider apps): GitHub `repo`, `read:user`, `user:email`; Google `https://www.googleapis.com/auth/gmail.modify`; Slack `channels:read`, `chat:write`, `users:read`; Notion per Notion’s OAuth docs.  
+4. Ensure the Auth0 Management API application used by the API can read user tokens / identities as required (`read:user_idp_tokens` or equivalent for your setup).
+
+**Verify connections**
+
+```bash
+curl -s -H "Authorization: Bearer $MGMT_TOKEN" \
+  "https://$AUTH0_DOMAIN/api/v2/connections"
+```
+
+You should see your connections; Token Vault–enabled connections should reflect that in the payload your tenant returns.
+
+**Operational notes**
+
+- Revoking in the dashboard keeps app state consistent; revoking only at GitHub/Google/Slack/Notion may leave stale “connected” rows until you reconnect through Guardian.  
+- Connections persist across app restarts.  
+- Per-user: each dashboard user has their own connections.
+
+---
+
+## 18. Production agent: Auth0 M2M Action
+
+The CLI uses the **client credentials** grant ([agent/src/auth/getAgentToken.ts](agent/src/auth/getAgentToken.ts)) with scope `agent:act`. For production, bind the agent to a specific Auth0 user by injecting a custom claim into the M2M access token.
+
+**Claim**
+
+- **Key:** must match `USER_ID_CLAIM` in [apps/api/src/middleware/agentAuth.ts](apps/api/src/middleware/agentAuth.ts). The repo default is a namespaced URI; if you fork, change the constant and your Action in lockstep.
+- **Value:** Auth0 user id (e.g. `auth0|…`, `github|…`)
+
+**Action setup (Auth0)**
+
+1. **Actions → Library → Build Custom** — trigger **Machine to Machine**, runtime Node 18+.  
+2. **Actions → Flows → Machine to Machine** — add the action to the flow and deploy.
+
+**Example action** (replace placeholders; restrict to your agent M2M client id):
+
+```javascript
+exports.onExecuteCredentialsExchange = async (event, api) => {
+  const AGENT_CLIENT_ID = 'YOUR_AGENT_M2M_CLIENT_ID';
+
+  if (event.client.client_id !== AGENT_CLIENT_ID) {
+    return;
+  }
+
+  const userId = 'YOUR_AUTH0_USER_ID'; // e.g. from User Management, or metadata in multi-tenant designs
+
+  // Must match USER_ID_CLAIM in apps/api/src/middleware/agentAuth.ts
+  const USER_ID_CLAIM = 'https://agentguardian.com/userId';
+  api.accessToken.setCustomClaim(USER_ID_CLAIM, userId);
+};
+```
+
+**Find `userId`**
+
+- Dashboard: `GET /api/v1/auth/me` response includes `auth0UserId`.  
+- Auth0 Dashboard: **User Management → Users → user_id**.
+
+The API reads this claim in `GET /api/v1/agent/whoami` when present; otherwise it falls back to development behavior (most recently active user). Multi-agent or multi-tenant patterns can use separate M2M apps, client metadata, or external lookups—keep the claim as the single source of truth for “who the agent acts as.”
+
+---
+
+## 19. Acting user resolution (implementation notes)
+
+- **Single resolution path:** [agent/src/auth/resolveActingUser.ts](agent/src/auth/resolveActingUser.ts) calls `GET /api/v1/agent/whoami` — no `x-agent-auth0-user-id` header on tool calls.  
+- **API:** [apps/api/src/routes/agent.ts](apps/api/src/routes/agent.ts) — `whoami` selects the user from the M2M claim when present, else the user with the latest `updatedAt` (dashboard login refreshes this via `/auth/me`).  
+- **Middleware:** [apps/api/src/middleware/agentAuth.ts](apps/api/src/middleware/agentAuth.ts) validates the agent JWT; user binding is not duplicated via ad hoc headers.
+
+Do not set legacy `AGENT_ACTING_AUTH0_USER_ID` in agent env for normal operation; use production claims or dev “most recent user” behavior.
+
+---
+
+## 20. Production deployment outline
+
+Typical single-host layout: **reverse proxy (e.g. Nginx)** on `443`, **Node** running the compiled API (`npm run build` then `node apps/api/dist/index.js` or `npm start -w apps/api`), **PostgreSQL** and **Redis** on localhost (Docker Compose is fine) or managed services. **Do not** expose Postgres, Redis, or the raw API port to the public internet—only `80`/`443` on the proxy.
+
+**Environment**
+
+- API: `NODE_ENV=production`, `DATABASE_URL`, `REDIS_URL`, Auth0 domain/audience/clients, `FRONTEND_URL` = public HTTPS origin (no path), Token Vault base URL if used, VAPID keys if using push.  
+- Web build: `VITE_*` must use the **public** API and socket URLs (often same origin as the site if the proxy routes `/api` and Socket.IO). Rebuild the frontend after any `VITE_*` change.
+
+**Database**
+
+From `apps/api` with production `DATABASE_URL`:
+
+```bash
+npx prisma migrate deploy
+```
+
+(Use your team’s migration policy; `prisma db push` is for bootstrap only when migrations are not yet committed.)
+
+**Health check**
+
+```bash
+curl -s https://your-domain/api/v1/auth/health
+```
+
+(`GET /api/v1/auth/health` — see [apps/api/src/routes/auth.ts](apps/api/src/routes/auth.ts).)
+
+**Auth0 application URLs**
+
+Register callback, logout, web origin, and CORS entries for your production domain (e.g. `https://app.example.com/callback`). Connection OAuth return paths must match how the API registers redirects (see connection routes).
+
+**TLS**
+
+Use Let’s Encrypt (e.g. Certbot with Nginx) or your cloud load balancer’s certificate.
+
+**Deploy loop (conceptual)**
+
+```bash
+git pull
+npm ci
+npm run build
+cd apps/api && npx prisma migrate deploy && cd ../..
+sudo systemctl restart your-api-service   # or equivalent
+```
+
+---
+
+## 21. Summary
+
+The implementation provides:
+
+- A dashboard for login, permissions, connections, approvals, and audit history  
+- An API that classifies tiers, orchestrates execution, and integrates Auth0 + providers  
+- A CLI agent using Auth0 M2M, acting-user resolution, and OpenRouter

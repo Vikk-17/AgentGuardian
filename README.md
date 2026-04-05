@@ -1,44 +1,60 @@
 # Agent Guardian
 
-Agent Guardian is a trust layer for AI agents acting on a user's behalf. It sits between an agent and third-party APIs, classifies each requested action into `AUTO`, `NUDGE`, or `STEP_UP`, and enforces the right approval flow before anything executes.
+Agent Guardian is a **trust layer** for AI agents that act on a user’s behalf. It sits between an agent and third-party APIs, classifies each requested action into `AUTO`, `NUDGE`, or `STEP_UP`, and enforces the right approval flow before anything executes.
 
-This repo includes:
+**In this repo**
 
-- A React dashboard for login, service connections, permissions, approvals, and audit history
-- An Express API for Auth0 auth, orchestration, tier classification, audit logging, and provider execution
-- A CLI agent that uses an OpenRouter-backed LLM and routes actions through the Guardian API
+| Piece | Role |
+|--------|------|
+| **Dashboard** (`apps/web`) | Login, connect services, tune permissions, approve or step-up actions, audit history |
+| **API** (`apps/api`) | Auth0 integration, tier classification, orchestration, audit logging, provider execution |
+| **CLI agent** (`agent`) | OpenRouter-backed LLM that routes tool calls through the Guardian API |
 
-## Trust Model
+## Trust model
 
-- `AUTO`: safe actions execute immediately
-- `NUDGE`: sensitive actions wait for user approval in a 60-second window
-- `STEP_UP`: high-risk actions require MFA-backed confirmation before execution
-- OAuth tokens are fetched on demand instead of being stored in the app database
+| Tier | Behavior |
+|------|----------|
+| `AUTO` | Safe actions run immediately |
+| `NUDGE` | Sensitive actions wait for approval in a **60-second** window |
+| `STEP_UP` | High-risk actions need **MFA-backed** confirmation before execution |
 
-## Repo Layout
+OAuth tokens are fetched on demand; raw provider tokens are **not** stored in the app database.
+
+## Prerequisites
+
+- **Node.js 20+** (matches [CI](.github/workflows/ci.yml))
+- **Docker** (or compatible runtime) for PostgreSQL and Redis via Compose
+- An **Auth0** tenant with SPA + API + M2M apps and OAuth connections (see [Connecting OAuth services](#connecting-oauth-services))
+- **OpenRouter** API key for the CLI agent
+
+## Documentation
+
+- **[README.md](README.md)** (this file): setup, OAuth connections, CLI, acting-user behavior, troubleshooting.
+- **[AgentGuardian_DeveloperDocs_v1.2.md](AgentGuardian_DeveloperDocs_v1.2.md)**: architecture, API reference, Auth0 Token Vault and M2M Action details, production deployment notes, implementation caveats.
+
+## Repo layout
 
 ```text
 apps/web        React + Vite dashboard
 apps/api        Express + Prisma API
 agent           CLI agent
 packages/shared Shared enums, defaults, and action metadata
-docs            Setup and deployment notes
 ```
 
-## Tech Stack
+## Tech stack
 
-- Frontend: React 18, Vite, Tailwind CSS, TanStack Query, Zustand, Auth0 React SDK, Socket.IO client
-- Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, Redis, BullMQ, Socket.IO, Zod, Winston
-- Agent: TypeScript, OpenAI SDK using the OpenRouter API
-- Auth: Auth0 Universal Login, Auth0 Management API, Token Vault-style service token retrieval
+- **Frontend:** React 18, Vite, Tailwind CSS, TanStack Query, Zustand, Auth0 React SDK, Socket.IO client
+- **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL, Redis, BullMQ, Socket.IO, Zod, Winston
+- **Agent:** TypeScript, OpenAI SDK → OpenRouter
+- **Auth:** Auth0 Universal Login, Auth0 Management API, Token Vault–style service token retrieval
 
-## Quick Start
+## Quick start
 
 ### 1. Install dependencies
 
 ```bash
-git clone git@github.com:subhachakraborty/AgentGuardian.git
-cd AgentGuardian
+git clone <your-fork-or-upstream-url>
+cd <repo-directory>
 npm install
 ```
 
@@ -46,11 +62,12 @@ npm install
 
 ```bash
 docker-compose up -d
+# or: npm run docker:up
 ```
 
-This brings up PostgreSQL and Redis for the API.
+This starts PostgreSQL and Redis for the API.
 
-### 3. Configure environment files
+### 3. Configure environment
 
 ```bash
 cp .env.example apps/api/.env
@@ -58,11 +75,12 @@ cp .env.example apps/web/.env
 cp agent/.env.example agent/.env
 ```
 
-Fill in:
+Fill in at minimum:
 
-- Auth0 values in `apps/api/.env` and `apps/web/.env`
-- Agent M2M credentials in `agent/.env`
-- `OPENROUTER_API_KEY` in `agent/.env`
+- **Auth0** values in `apps/api/.env` and `apps/web/.env` (domain, audience, client IDs, M2M secrets as documented in `.env.example`)
+- **Agent M2M** credentials and `OPENROUTER_API_KEY` in `agent/.env`
+
+The root `/.env.example` lists API, web, and shared variables in one place; web vars are the `VITE_*` entries.
 
 ### 4. Prepare the database
 
@@ -71,22 +89,22 @@ npm run db:migrate
 npm run db:seed
 ```
 
-### 5. Start the dashboard and API
+### 5. Run the dashboard and API
 
 ```bash
 npm run dev
 ```
 
-- Web dashboard: `http://localhost:5173`
-- API: `http://localhost:3001`
+- **Web:** `http://localhost:5173`
+- **API:** `http://localhost:3001`
 
-### 6. Log in through the dashboard
+### 6. Log in via the dashboard
 
-Log in once at `http://localhost:5173`. The dashboard calls `/api/v1/auth/me` to create or refresh your local user record, which the CLI uses in development mode.
+Log in once at `http://localhost:5173`. The app calls `/api/v1/auth/me`, which creates or refreshes your local user record (needed for **development-mode** CLI user resolution).
 
 ### 7. Connect a service
 
-Open the Connections page and authorize at least one provider such as GitHub, Gmail, Slack, or Notion.
+Open **Connections** and authorize at least one provider (e.g. GitHub, Gmail, Slack, Notion). See [Connecting OAuth services](#connecting-oauth-services) if anything fails.
 
 ### 8. Start the CLI agent
 
@@ -94,11 +112,26 @@ Open the Connections page and authorize at least one provider such as GitHub, Gm
 npm run dev -w agent
 ```
 
+## Root npm scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | API + web (concurrent) |
+| `npm run dev:api` / `npm run dev:web` | One app only |
+| `npm run build` | Shared → API → web production build |
+| `npm run type-check` | TypeScript without emit |
+| `npm run lint` | ESLint on `.ts` / `.tsx` |
+| `npm run test` | Vitest |
+| `npm run db:migrate` / `npm run db:seed` / `npm run db:studio` | Prisma (via `apps/api`) |
+| `npm run docker:up` / `npm run docker:down` | Compose helpers |
+
+CI runs `build` (shared), `type-check`, `lint`, and `test` on push and pull requests.
+
 ## Agent CLI
 
-The agent is interactive and acts on behalf of the currently resolved user.
+The agent is interactive and acts on behalf of the **resolved** user (see below).
 
-Example session:
+Example:
 
 ```text
 User> list my GitHub repositories
@@ -106,19 +139,18 @@ User> create an issue in my-repo
 User> exit
 ```
 
-### Agent scripts
+| Script | Use |
+|--------|-----|
+| `npm run dev -w agent` | Run the agent (loads `agent/.env`) |
+| `npm run start -w agent` | Same as `dev` |
+| `npm run dev:watch -w agent` | Watch mode while editing agent code |
 
-- `npm run dev -w agent`: run the agent
-- `npm run start -w agent`: same as `dev`
-- `npm run dev:watch -w agent`: watch mode for local agent development
-
-### Agent environment
-
-`agent/.env` should include:
+### Agent environment (`agent/.env`)
 
 ```bash
 AUTH0_DOMAIN=your-tenant.us.auth0.com
-AUTH0_AUDIENCE=https://api.agentguardian.com
+# Must match your Auth0 API identifier (often a URL, e.g. https://api.example.com)
+AUTH0_AUDIENCE=<CUSTOM_AUTH0_AUDIENCE>
 AGENT_AUTH0_CLIENT_ID=your_m2m_client_id
 AGENT_AUTH0_CLIENT_SECRET=your_m2m_client_secret
 GUARDIAN_API_URL=http://localhost:3001
@@ -126,135 +158,117 @@ OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL=openai/gpt-4o-mini
 ```
 
-## How the Agent Resolves the Acting User
+## How the agent resolves the acting user
 
-- Development mode: the API uses the most recently active dashboard user
-- Production mode: an Auth0 M2M Action can inject `https://agentguardian.com/userId` into the agent token
+| Mode | Behavior |
+|------|----------|
+| **Development (default)** | After you log in, `GET /api/v1/auth/me` upserts your user and refreshes `updatedAt`. The agent calls `GET /api/v1/agent/whoami`, which picks the **most recently active** user. No user ID in `agent/.env` is required. |
+| **Production** | In an Auth0 **Machine-to-Machine** credentials-exchange Action, set a custom claim whose **name** matches **`USER_ID_CLAIM`** in [`apps/api/src/middleware/agentAuth.ts`](apps/api/src/middleware/agentAuth.ts) and whose **value** is the Auth0 user id (e.g. `github|123`). If you change the string in code, update the Action to match. |
 
-That flow is documented in [docs/auth0-m2m-action-setup.md](/home/sc/AgentGurdian/docs/auth0-m2m-action-setup.md).
+**Wrong user in dev:** log into the dashboard as the account you want; that refreshes `updatedAt`. **Explicit production binding:** full Action code and steps are in [AgentGuardian_DeveloperDocs_v1.2.md](AgentGuardian_DeveloperDocs_v1.2.md) (Auth0 M2M Action section).
 
-## Repository-Aware GitHub Behavior
+**Migration:** remove any legacy `AGENT_ACTING_AUTH0_USER_ID` from agent config; resolution is centralized in `/whoami`.
 
-When you run the agent inside another git repository, it inspects `remote.origin.url` and uses that as ambient GitHub context.
+## Repository-aware GitHub behavior
 
-Example:
+If you run the agent inside another git repo, it reads `remote.origin.url` for ambient GitHub context:
 
 ```bash
 cd /path/to/my-project
-npm run dev -w /path/to/AgentGuardian/agent
+npm run dev -w /path/to/<this-repo>/agent
 ```
 
-The agent can then interpret phrases like:
+Examples: `create an issue in this repo`, `open a PR in other-repo`, `merge PR 42 in owner/repo`. If `owner` is omitted, the backend may infer it from the GitHub token.
 
-- `create an issue in this repo`
-- `open a PR in other-repo`
-- `merge PR 42 in owner/repo`
+## Supported services
 
-If `owner` is omitted, the backend tries to infer the authenticated GitHub username from the GitHub token.
+Gmail, GitHub, Slack, Notion.
 
-## Supported Services
+Default action tiers: [packages/shared/src/constants/defaults.ts](packages/shared/src/constants/defaults.ts).
 
-- Gmail
-- GitHub
-- Slack
-- Notion
+### GitHub actions used in the agent flow
 
-Default action tiers live in [packages/shared/src/constants/defaults.ts](/home/sc/AgentGurdian/packages/shared/src/constants/defaults.ts).
+- `github.read_repositories`, `github.read_issues`, `github.read_prs`, `github.read_code`, `github.read_branches`
+- `github.create_issue`, `github.comment_issue`, `github.open_pr`, `github.merge_pr`, `github.close_issue`, `github.delete_branch`
 
-### Current GitHub actions in the agent flow
+Full catalog: same `defaults.ts` file and [AgentGuardian_DeveloperDocs_v1.2.md](AgentGuardian_DeveloperDocs_v1.2.md).
 
-- `github.read_repositories`
-- `github.read_issues`
-- `github.read_prs`
-- `github.read_code`
-- `github.read_branches`
-- `github.create_issue`
-- `github.comment_issue`
-- `github.open_pr`
-- `github.merge_pr`
-- `github.close_issue`
-- `github.delete_branch`
+## Connecting OAuth services
 
-For the full cross-service action catalog, see [packages/shared/src/constants/defaults.ts](/home/sc/AgentGurdian/packages/shared/src/constants/defaults.ts).
+Provider OAuth goes through Auth0; **access tokens are not stored in this app’s database**—connection state is local, tokens come from Auth0 (Token Vault–style retrieval in the API). In Auth0, enable **Token Vault** (or equivalent) on each social connection you use (GitHub, Google for Gmail, Slack, Notion) and grant the Management API access your tenant needs to read tokens (see Developer Docs).
 
-## Example Approval Flow
+**Dashboard flow**
+
+1. Open `http://localhost:5173` and sign in.  
+2. **Connections** → **Connect** on each provider you need.  
+3. Complete the provider’s consent screen; you should see **Connected**.  
+4. Run the agent.
+
+**If the agent says a service is not connected:** connect that service in the dashboard first (same Auth0 user you intend the agent to use).
+
+**Typical recovery**
+
+| Problem | What to do |
+|---------|------------|
+| Token expired / revoked | Connections → **Revoke**, then **Connect** again to re-authorize. |
+| “Empty” or missing token from Auth0 | Confirm Token Vault is enabled on the connection and Management API permissions are correct; reconnect from the dashboard. |
+| Connected in UI but actions fail | Revoke, wait a few seconds, connect again to force a fresh OAuth flow. |
+| User not found / agent cannot resolve user | Log into the dashboard once so `/auth/me` creates your user row. |
+
+## Example approval flows
 
 ### `AUTO`
 
 ```text
 User> show me my GitHub repositories
-Agent reads data and returns the result immediately.
+→ Agent reads data and returns the result immediately.
 ```
 
 ### `NUDGE`
 
 ```text
 User> create an issue titled "Fix bug" in my-repo
-Action enters pending approval.
-User approves in the dashboard.
-Action executes and the result is returned to the agent.
+→ Action is pending approval.
+→ User approves in the dashboard.
+→ Action runs and the agent sees the result.
 ```
 
 ### `STEP_UP`
 
 ```text
 User> merge PR #42 in my-repo
-Action requires elevated confirmation.
-User completes MFA-backed approval in the dashboard.
-Action executes after verification.
+→ Action requires elevated confirmation.
+→ User completes MFA-backed approval in the dashboard.
+→ Action runs after verification.
 ```
 
-## Architecture Summary
+## Architecture (high level)
 
 ```text
-Dashboard -> Auth0 login -> Guardian API
-CLI Agent -> M2M token -> Guardian API
-Guardian API -> classify tier -> fetch service token -> execute provider action
-Guardian API -> PostgreSQL + Redis + Socket.IO for state, audit, and approvals
+Dashboard → Auth0 login → Guardian API
+CLI agent → M2M token → Guardian API
+Guardian API → classify tier → fetch service token → execute provider action
+Guardian API → PostgreSQL + Redis + Socket.IO (state, audit, approvals)
 ```
 
-## Development Notes
+## Development notes
 
-- The root `npm run dev` starts the API and web app only
-- Start the CLI separately with `npm run dev -w agent`
-- Unknown actions default to `STEP_UP` as a fail-safe
-- Connection metadata is stored in PostgreSQL, but raw provider tokens are not
-- `GitHub` owner resolution is dynamic when the LLM omits `owner`
+- `npm run dev` starts **API + web only**; start the CLI separately.
+- Unknown actions default to `STEP_UP` in `classifyTier()`.
+- Connection metadata lives in PostgreSQL; raw provider tokens do not.
+- GitHub `owner` can be inferred when the LLM omits it.
 
 ## Troubleshooting
 
-### Agent cannot resolve the acting user
-
-- Log into the dashboard first at `http://localhost:5173`
-- This creates or refreshes the local user profile used in development mode
-
-### Agent token fetch failed
-
-- Check `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AGENT_AUTH0_CLIENT_ID`, and `AGENT_AUTH0_CLIENT_SECRET` in `agent/.env`
-- Confirm the Auth0 M2M application is configured correctly
-
-### Service is not connected
-
-- Go to the Connections page in the dashboard
-- Connect or reconnect the provider
-
-### Agent uses the wrong repository
-
-- Specify the repo name explicitly
-- Use `owner/repo` if you want a repository outside your default account
-
-### Watch mode flickers
-
-- Prefer `npm run dev -w agent` for normal use
-- Use `npm run dev:watch -w agent` only when actively modifying agent code
-
-## Main Docs
-
-- [AgentGuardian_DeveloperDocs_v1.2.md](/home/sc/AgentGurdian/AgentGuardian_DeveloperDocs_v1.2.md)
-- [docs/connecting-services.md](/home/sc/AgentGurdian/docs/connecting-services.md)
-- [docs/auth0-m2m-action-setup.md](/home/sc/AgentGurdian/docs/auth0-m2m-action-setup.md)
-- [docs/agent-dynamic-auth-changes.md](/home/sc/AgentGurdian/docs/agent-dynamic-auth-changes.md)
-- [docs/deploy-aws-ec2.md](/home/sc/AgentGurdian/docs/deploy-aws-ec2.md)
+| Symptom | What to try |
+|---------|-------------|
+| Agent cannot resolve user | Log into the dashboard at `http://localhost:5173` so `/auth/me` refreshes your profile. |
+| Agent acts as the wrong user (dev) | Log in as the intended user so their `updatedAt` is newest, or use production M2M + Action (Developer Docs). |
+| Agent token fetch failed | Check `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AGENT_AUTH0_CLIENT_ID`, `AGENT_AUTH0_CLIENT_SECRET` in `agent/.env` and Auth0 M2M app settings. |
+| Service not connected | Use **Connections** in the dashboard to connect or reconnect. |
+| Token expired / bad token | Revoke and reconnect the provider; see [Connecting OAuth services](#connecting-oauth-services). |
+| Wrong GitHub repo | Name the repo explicitly or use `owner/repo`. |
+| Watch mode flickers | Prefer `npm run dev -w agent`; use `dev:watch` only when editing agent code. |
 
 ## License
 
