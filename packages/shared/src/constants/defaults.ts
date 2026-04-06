@@ -12,6 +12,7 @@ export const ACTION_DESCRIPTIONS: Record<string, string> = {
   'gmail.send_bulk': 'Send batch of emails',
 
   // GitHub
+  'github.read_repositories': 'List and read repositories',
   'github.read_issues': 'List and read issues',
   'github.read_prs': 'List and read pull requests',
   'github.read_code': 'Read file contents from repository',
@@ -53,6 +54,7 @@ export const DEFAULT_TIER_MAP: Record<string, Record<string, ActionTier>> = {
     'gmail.send_bulk': ActionTier.STEP_UP,
   },
   [ServiceType.GITHUB]: {
+    'github.read_repositories': ActionTier.AUTO,
     'github.read_issues': ActionTier.AUTO,
     'github.read_prs': ActionTier.AUTO,
     'github.read_code': ActionTier.AUTO,

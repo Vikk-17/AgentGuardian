@@ -167,8 +167,6 @@ OPENROUTER_MODEL=openai/gpt-4o-mini
 
 **Wrong user in dev:** log into the dashboard as the account you want; that refreshes `updatedAt`. **Explicit production binding:** full Action code and steps are in [AgentGuardian_DeveloperDocs_v1.2.md](AgentGuardian_DeveloperDocs_v1.2.md) (Auth0 M2M Action section).
 
-**Migration:** remove any legacy `AGENT_ACTING_AUTH0_USER_ID` from agent config; resolution is centralized in `/whoami`.
-
 ## Repository-aware GitHub behavior
 
 If you run the agent inside another git repo, it reads `remote.origin.url` for ambient GitHub context:
@@ -189,7 +187,7 @@ Default action tiers: [packages/shared/src/constants/defaults.ts](packages/share
 ### GitHub actions used in the agent flow
 
 - `github.read_repositories`, `github.read_issues`, `github.read_prs`, `github.read_code`, `github.read_branches`
-- `github.create_issue`, `github.comment_issue`, `github.open_pr`, `github.merge_pr`, `github.close_issue`, `github.delete_branch`
+- `github.create_issue`, `github.comment_issue`, `github.open_pr`, `github.merge_pr`, `github.merge_to_main`, `github.push_code`, `github.close_issue`, `github.delete_branch`
 
 Full catalog: same `defaults.ts` file and [AgentGuardian_DeveloperDocs_v1.2.md](AgentGuardian_DeveloperDocs_v1.2.md).
 
