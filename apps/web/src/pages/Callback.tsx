@@ -1,7 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiClient, setTokenGetter } from '../api/client';
+import { setTokenGetter } from '../api/client';
 
 export function Callback() {
   const { isAuthenticated, isLoading, error, getAccessTokenSilently } = useAuth0();

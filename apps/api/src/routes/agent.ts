@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireScope } from '../middleware/auth';
-import { requireAgentAuth, getActingUserId, getAgentId } from '../middleware/agentAuth';
+import { getActingUserId, getAgentId } from '../middleware/agentAuth';
 import { requireStepUp } from '../middleware/stepUpAuth';
 import { agentActionLimiter } from '../middleware/rateLimit';
 import { orchestrateAction, executeApprovedAction } from '../services/orchestrator';

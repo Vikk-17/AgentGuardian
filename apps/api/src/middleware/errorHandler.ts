@@ -1,19 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../lib/logger';
 
-// Custom error class for API errors
-export class ApiError extends Error {
-  constructor(
-    public statusCode: number,
-    public code: string,
-    message: string,
-    public details?: unknown
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 // Global error handler
 export function errorHandler(
   err: Error,
@@ -28,15 +15,6 @@ export function errorHandler(
     path: req.path,
     method: req.method,
   });
-
-  // Handle known API errors
-  if (err instanceof ApiError) {
-    return res.status(err.statusCode).json({
-      error: err.code,
-      message: err.message,
-      details: err.details,
-    });
-  }
 
   // Handle express-oauth2-jwt-bearer errors (maps to correct 401)
   if (err.name === 'UnauthorizedError' || (err as any).status === 401) {

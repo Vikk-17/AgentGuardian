@@ -93,6 +93,3 @@ export const SERVICE_ACTIONS: Record<ServiceType, string[]> = {
 };
 
 export const NUDGE_TIMEOUT_MS = 60_000; // 60 seconds
-export const NUDGE_POLL_INTERVAL_MS = 3_000;
-export const AGENT_TOKEN_LIFETIME_S = 300; // 5 minutes
-export const STEP_UP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes

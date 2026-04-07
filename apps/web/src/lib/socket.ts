@@ -31,9 +31,3 @@ export function connectSocket(userId: string) {
   s.emit('join', userId);
   console.log('Socket joined room:', userId);
 }
-
-export function disconnectSocket() {
-  if (socket?.connected) {
-    socket.disconnect();
-  }
-}

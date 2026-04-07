@@ -64,8 +64,6 @@ export async function notifyUser(params: NotifyParams) {
   } catch (err: any) {
     logger.warn('Web Push notification failed', { error: err.message });
   }
-
-  // Layer 3: Slack DM fallback handled separately via Token Vault
 }
 
 // Emit activity feed update

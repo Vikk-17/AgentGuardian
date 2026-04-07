@@ -28,14 +28,6 @@ export function requireScope(scope: string) {
   };
 }
 
-// Tier policy denial — also 403
-export function tierDenied(res: Response, reason: string) {
-  return res.status(403).json({
-    error: 'action_denied',
-    message: reason,
-  });
-}
-
 // Extract user ID from JWT payload (human user token)
 export function getUserId(req: Request): string | undefined {
   return (req as any).auth?.payload?.sub as string | undefined;

@@ -10,15 +10,6 @@ export const agentActionLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Auth endpoints rate limiter
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { error: 'rate_limited', message: 'Too many auth requests.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // General API rate limiter
 export const generalLimiter = rateLimit({
   windowMs: 60 * 1000,

@@ -168,22 +168,6 @@ export async function denyNudgeAction(
   return updated;
 }
 
-export async function expireNudgeAction(jobId: string) {
-  const updated = await prisma.pendingAction.update({
-    where: { id: jobId },
-    data: {
-      status: 'EXPIRED',
-      resolvedAt: new Date(),
-    },
-  });
-
-  // Clean up Redis payload to prevent memory leak
-  await redis.del(`nudge:payload:${jobId}`);
-
-  logger.info('Nudge action expired', { jobId });
-  return updated;
-}
-
 export async function getPendingAction(jobId: string) {
   return prisma.pendingAction.findUnique({
     where: { id: jobId },

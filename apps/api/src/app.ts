@@ -22,16 +22,12 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-id-token'],
 }));
-// app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 app.use(generalLimiter);
 
 // Trust proxy (for Railway/Vercel)
 app.set('trust proxy', 1);
-
-// Health check (no auth prefix)
-// app.use('/api/v1', authRoutes);
 
 // Authenticated routes
 app.use('/api/v1/auth', authRoutes);
