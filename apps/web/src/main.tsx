@@ -18,9 +18,13 @@ const queryClient = new QueryClient({
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((error: any) => {
-      console.error('ServiceWorker registration failed:', error);
-    });
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.debug('ServiceWorker registered:', registration.scope);
+      })
+      .catch((error: any) => {
+        console.error('ServiceWorker registration failed:', error);
+      });
   });
 }
 

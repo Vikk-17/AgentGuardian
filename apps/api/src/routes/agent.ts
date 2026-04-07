@@ -6,7 +6,7 @@ import { agentActionLimiter } from '../middleware/rateLimit';
 import { orchestrateAction, executeApprovedAction } from '../services/orchestrator';
 import { approveNudgeAction, denyNudgeAction, getPendingAction, getUserPendingActions } from '../services/nudgeService';
 import { createAuditLog } from '../services/auditService';
-import { emitNudgeResolved, emitActivityUpdate } from '../services/notificationService';
+import { emitNudgeResolved, emitActivityUpdate, emitStepUpCompleted } from '../services/notificationService';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { z } from 'zod';
@@ -161,12 +161,30 @@ router.get('/action/:jobId/status', requireAuth, async (req: Request, res: Respo
       return res.json({ status: 'EXPIRED', jobId });
     }
 
+    // If action is completed, fetch the audit log to get execution result
+    let executionData = undefined;
+    if (pending.status === 'APPROVED' || pending.stepUpVerified) {
+      const auditLog = await prisma.auditLog.findFirst({
+        where: {
+          userId: pending.userId,
+          service: pending.service,
+          actionType: pending.actionType,
+          payloadHash: pending.payloadHash,
+        },
+        orderBy: { executedAt: 'desc' },
+      });
+      if (auditLog?.metadata) {
+        executionData = auditLog.metadata;
+      }
+    }
+
     res.json({
       status: pending.stepUpVerified ? 'STEP_UP_VERIFIED' : pending.status,
       jobId: pending.id,
       expiresAt: pending.expiresAt.toISOString(),
       resolvedAt: pending.resolvedAt?.toISOString(),
       resolvedByUserId: pending.resolvedByUserId,
+      data: executionData,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'internal_error', message: err.message });
@@ -193,7 +211,7 @@ router.post('/action/:jobId/approve', requireAuth, async (req: Request, res: Res
     );
 
     // Emit resolution to dashboard
-    emitNudgeResolved(updated.userId, jobId, 'APPROVED', resolvingUserId);
+    await emitNudgeResolved(updated.userId, jobId, 'APPROVED', resolvingUserId);
 
     res.json({ status: 'APPROVED', jobId, execution: execResult });
   } catch (err: any) {
@@ -225,7 +243,7 @@ router.post('/action/:jobId/deny', requireAuth, async (req: Request, res: Respon
       approvedByIp: resolvingIp,
     });
 
-    emitNudgeResolved(updated.userId, jobId, 'DENIED', resolvingUserId);
+    await emitNudgeResolved(updated.userId, jobId, 'DENIED', resolvingUserId);
 
     res.json({ status: 'DENIED', jobId });
   } catch (err: any) {
@@ -264,6 +282,17 @@ router.post(
         resolvingIp,
         true // stepUpVerified
       );
+
+      // Get the pending action to find userId
+      const pending = await prisma.pendingAction.findUnique({
+        where: { id: jobId },
+        select: { userId: true },
+      });
+
+      if (pending) {
+        // Emit step-up completed event
+        await emitStepUpCompleted(pending.userId, jobId, execResult);
+      }
 
       res.json({ status: 'STEP_UP_VERIFIED', jobId, execution: execResult });
     } catch (err: any) {

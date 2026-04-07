@@ -4,13 +4,17 @@ import { apiClient } from '../api/client';
 export function useConnections() {
   const queryClient = useQueryClient();
 
-  const { data: connections, isLoading } = useQuery({
+  const { data: connections, isLoading, error } = useQuery({
     queryKey: ['connections'],
     queryFn: async () => {
       const res = await apiClient.get('/connections');
       return res.data;
     },
   });
+
+  if (error) {
+    console.error('useConnections error:', error);
+  }
 
   const connectService = useMutation({
     mutationFn: async (service: string) => {

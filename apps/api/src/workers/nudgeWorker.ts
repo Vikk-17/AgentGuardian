@@ -48,7 +48,7 @@ export function startNudgeWorker() {
         await redis.del(`nudge:payload:${pendingActionId}`);
 
         // Notify via Socket.io
-        emitNudgeExpired(userId, pendingActionId);
+        await emitNudgeExpired(userId, pendingActionId);
 
         logger.info('Nudge action expired', { pendingActionId, userId });
       }

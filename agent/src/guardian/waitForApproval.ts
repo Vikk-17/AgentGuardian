@@ -8,18 +8,20 @@ type ApprovalStatus =
   | 'STEP_UP_VERIFIED'
   | 'DENIED'
   | 'EXPIRED'
-  | 'EXECUTED';
+  | 'EXECUTED'
+  | 'FAILED';
 
 interface PollResult {
   status: ApprovalStatus;
   auditLogId?: string;
   error?: string;
+  data?: any;
 }
 
 export async function waitForApproval(
   jobId: string,
   agentToken: string,
-  timeoutMs: number = 70_000,
+  timeoutMs: number = 5 * 60 * 1000, // 5 minutes for STEP_UP
   intervalMs: number = 3_000
 ): Promise<PollResult> {
   const deadline = Date.now() + timeoutMs;
@@ -39,12 +41,20 @@ export async function waitForApproval(
 
     const data: PollResult = await resp.json();
 
-    if (data.status !== 'PENDING_APPROVAL') {
-      return data; // Terminal state — stop polling
+    // Terminal states - stop polling
+    if (['APPROVED', 'STEP_UP_VERIFIED', 'EXECUTED', 'DENIED', 'EXPIRED', 'FAILED'].includes(data.status)) {
+      return data;
     }
 
-    // Exponential backoff: 3s → 5s → 8s → cap at 10s
-    backoff = Math.min(backoff * 1.5, 10_000);
+    // Still pending - continue polling
+    if (data.status === 'PENDING_APPROVAL') {
+      // Exponential backoff: 3s → 5s → 8s → cap at 10s
+      backoff = Math.min(backoff * 1.5, 10_000);
+      continue;
+    }
+
+    // Unknown status
+    throw new Error(`Unknown status: ${data.status}`);
   }
 
   return { status: 'EXPIRED', error: 'Client-side timeout exceeded' };

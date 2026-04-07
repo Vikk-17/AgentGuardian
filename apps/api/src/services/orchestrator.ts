@@ -99,7 +99,7 @@ async function handleAutoTier(
     });
 
     // Emit to activity feed
-    emitActivityUpdate(userId, auditLog);
+    await emitActivityUpdate(userId, auditLog);
 
     return {
       tier: 'AUTO',
@@ -214,8 +214,19 @@ async function handleStepUpTier(
   // Generate challenge URL pointing to the dashboard SPA
   const challengeUrl = `${env.FRONTEND_URL}/step-up?jobId=${pendingAction.id}`;
 
-  // Emit step-up required event
-  emitStepUpRequired(userId, pendingAction.id, challengeUrl);
+  // Notify user via all channels (adds to pendingActions in frontend)
+  await notifyUser({
+    userId,
+    pendingAction: {
+      ...pendingAction,
+      service,
+      actionType,
+      tier: 'STEP_UP',
+    },
+  });
+
+  // Emit step-up required event (triggers modal)
+  await emitStepUpRequired(userId, pendingAction.id, challengeUrl);
 
   return {
     tier: 'STEP_UP',
@@ -271,15 +282,17 @@ export async function executeApprovedAction(
       approvedByUserId,
       approvedByIp,
       stepUpVerified: stepUpVerified ?? false,
+      metadata: result?.data || result?.metadata,
     });
 
     // Emit update
-    emitActivityUpdate(pending.userId, auditLog);
+    await emitActivityUpdate(pending.userId, auditLog);
 
     return {
       tier: pending.tier,
       status: 'EXECUTED',
       auditLogId: auditLog.id,
+      data: result?.data,
     };
   } catch (err: any) {
     const auditLog = await createAuditLog({

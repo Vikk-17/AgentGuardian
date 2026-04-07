@@ -79,26 +79,31 @@ User> show me my GitHub repositories
 
 User> what issues are open in AgentGuardian?
 🤖 Agent: There are 3 open issues...
+
+User> list branches in my-repo
+🤖 Agent: The branches in my-repo are: main, develop, feature-xyz...
 ```
 
 ### Write Operations (NUDGE - requires approval)
 ```
 User> create an issue titled "Fix bug" in my-repo
 📦 Payload: {"repo":"my-repo","title":"Fix bug"}
-⏸️  Action requires Human Approval. (Tier: NUDGE)
-   Waiting for user to approve via Dashboard...
+⏸️  Action requires approval (Tier: NUDGE)
+   🟡 Waiting for user approval via Dashboard (60 seconds)...
 ✅ Action was approved and executed.
 🤖 Agent: I've created issue #42 in my-repo!
 ```
 
 ### Destructive Operations (STEP_UP - requires MFA)
 ```
-User> merge PR #42 in my-repo
-📦 Payload: {"repo":"my-repo","prNumber":42}
-⏸️  Action requires Human Approval. (Tier: STEP_UP)
-   Waiting for user to approve via Dashboard...
+User> delete branch feature-old in my-repo
+📦 Payload: {"repo":"my-repo","branch":"feature-old"}
+⏸️  Action requires approval (Tier: STEP_UP)
+   🔴 This is a HIGH-RISK action requiring MFA verification
+   📱 Open the dashboard and complete MFA to proceed
+   ⏳ Waiting up to 5 minutes...
 ✅ Action was approved and executed.
-🤖 Agent: PR #42 has been merged successfully!
+🤖 Agent: Branch feature-old has been deleted!
 ```
 
 ## Repository Context

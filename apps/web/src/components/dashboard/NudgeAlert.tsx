@@ -5,11 +5,14 @@ import { Check, X, Clock } from 'lucide-react';
 export function NudgeAlert() {
   const { pendingActions, approveAction, denyAction } = useNudges();
 
-  if (!pendingActions.length) return null;
+  // Only show NUDGE tier actions (STEP_UP actions use StepUpModal)
+  const nudgeActions = pendingActions.filter((action) => action.tier === 'NUDGE');
+
+  if (!nudgeActions.length) return null;
 
   return (
     <div className="space-y-3">
-      {pendingActions.map((action) => (
+      {nudgeActions.map((action) => (
         <NudgeCard
           key={action.id}
           action={action}

@@ -6,6 +6,24 @@ import { Shield } from 'lucide-react';
 export function Connections() {
   const { connections, isLoading, connectService, revokeService } = useConnections();
 
+  if (isLoading) {
+    return (
+      <>
+        <TopNav
+          title="Service Connections"
+          subtitle="Manage the services your AI agent can access via Token Vault"
+        />
+        <div className="p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="card p-6 animate-pulse h-48" />
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <TopNav
@@ -30,32 +48,24 @@ export function Connections() {
         </div>
 
         {/* Connection cards */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="card p-6 animate-pulse h-48" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {connections.map((conn: any) => (
-              <ServiceCard
-                key={conn.service}
-                service={conn.service}
-                status={conn.status}
-                connectedAt={conn.connectedAt}
-                lastUsedAt={conn.lastUsedAt}
-                onConnect={() => connectService.mutate(conn.service.toLowerCase())}
-                onRevoke={() => {
-                  if (confirm(`Revoke ${conn.service} access? The agent will immediately lose access.`)) {
-                    revokeService.mutate(conn.service.toLowerCase());
-                  }
-                }}
-                isConnecting={connectService.isPending}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {connections.map((conn: any) => (
+            <ServiceCard
+              key={conn.service}
+              service={conn.service}
+              status={conn.status}
+              connectedAt={conn.connectedAt}
+              lastUsedAt={conn.lastUsedAt}
+              onConnect={() => connectService.mutate(conn.service.toLowerCase())}
+              onRevoke={() => {
+                if (confirm(`Revoke ${conn.service} access? The agent will immediately lose access.`)) {
+                  revokeService.mutate(conn.service.toLowerCase());
+                }
+              }}
+              isConnecting={connectService.isPending}
+            />
+          ))}
+        </div>
       </div>
     </>
   );

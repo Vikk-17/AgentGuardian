@@ -168,7 +168,7 @@ router.delete('/:service', requireAuth, async (req: Request, res: Response) => {
     }
 
     // Emit real-time update
-    emitConnectionRevoked(auth0UserId, service.toUpperCase());
+    await emitConnectionRevoked(user.id, service.toUpperCase());
 
     logger.info('Service connection revoked', { userId: user.id, service });
     res.json({ status: 'revoked', service: service.toUpperCase() });

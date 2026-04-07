@@ -18,8 +18,18 @@ export function connectSocket(userId: string) {
   const s = getSocket();
   if (!s.connected) {
     s.connect();
+    s.on('connect', () => {
+      console.log('✅ Socket connected');
+    });
+    s.on('disconnect', () => {
+      console.log('❌ Socket disconnected');
+    });
+    s.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message);
+    });
   }
   s.emit('join', userId);
+  console.log('Socket joined room:', userId);
 }
 
 export function disconnectSocket() {

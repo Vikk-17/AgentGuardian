@@ -15,6 +15,7 @@ export function useActivityFeed() {
     removePendingAction,
     setPendingActions,
     showStepUpModal,
+    hideStepUpModal,
   } = useActivityStore();
 
   // Fetch initial activity log
@@ -69,7 +70,17 @@ export function useActivityFeed() {
     });
 
     socket.on('stepup:required', ({ jobId, challengeUrl }) => {
+      console.log('🔴 STEP_UP required:', { jobId, challengeUrl });
       showStepUpModal(jobId, challengeUrl);
+    });
+
+    socket.on('stepup:completed', ({ jobId, auditLog }) => {
+      console.log('✅ STEP_UP completed:', { jobId });
+      removePendingAction(jobId);
+      hideStepUpModal();
+      if (auditLog) {
+        addActivity(auditLog);
+      }
     });
 
     return () => {
@@ -78,8 +89,9 @@ export function useActivityFeed() {
       socket.off('nudge:resolved');
       socket.off('nudge:expired');
       socket.off('stepup:required');
+      socket.off('stepup:completed');
     };
-  }, [user?.sub, addActivity, addPendingAction, removePendingAction, showStepUpModal]);
+  }, [user?.sub, addActivity, addPendingAction, removePendingAction, showStepUpModal, hideStepUpModal]);
 
   return { activities, isLoading, total: data?.total ?? 0 };
 }

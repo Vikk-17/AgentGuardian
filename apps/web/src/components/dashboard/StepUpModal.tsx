@@ -3,11 +3,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { ShieldAlert, X, Fingerprint } from 'lucide-react';
 
 export function StepUpModal() {
-  const { stepUpModal, hideStepUpModal } = useActivityStore();
+  const { loginWithRedirect } = useAuth0();
+  const { stepUpModal, hideStepUpModal, pendingActions } = useActivityStore();
+
+  // Always call hooks in the same order - can't return early before hooks
+  const jobId = stepUpModal?.jobId;
+  const action = jobId ? pendingActions.find(a => a.id === jobId) : undefined;
 
   if (!stepUpModal) return null;
-
-  const { loginWithRedirect } = useAuth0();
 
   const handleMFA = () => {
     loginWithRedirect({
@@ -44,6 +47,16 @@ export function StepUpModal() {
             <X className="w-5 h-5 text-text-muted" />
           </button>
         </div>
+
+        {/* Action Details */}
+        {action && (
+          <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-200">
+            <p className="text-sm font-semibold text-slate-900 mb-1">
+              🤖 Agent wants to perform:
+            </p>
+            <p className="text-sm text-slate-700">{action.displaySummary}</p>
+          </div>
+        )}
 
         {/* Warning */}
         <div className="bg-red-50 rounded-xl p-4 mb-6 border border-red-100">

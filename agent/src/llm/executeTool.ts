@@ -51,15 +51,29 @@ export async function executeGuardianAction(
   }
   
   if (data.status === 'PENDING_APPROVAL' || data.status === 'AWAITING_MFA') {
-    console.log(`⏸️  Action requires Human Approval. (Tier: ${data.tier})`);
-    console.log(`   Waiting for user to approve via Dashboard...`);
+    const tier = data.tier || 'UNKNOWN';
+    console.log(`⏸️  Action requires approval (Tier: ${tier})`);
+    
+    if (tier === 'STEP_UP') {
+      console.log(`   🔴 This is a HIGH-RISK action requiring MFA verification`);
+      console.log(`   📱 Open the dashboard and complete MFA to proceed`);
+      console.log(`   ⏳ Waiting up to 5 minutes...`);
+    } else {
+      console.log(`   🟡 Waiting for user approval via Dashboard (60 seconds)...`);
+    }
     
     try {
       const finalResult = await waitForApproval(data.jobId, token);
-      console.log(`✅ Action was approved and executed.`);
-      return `Success: Action was human-approved and executed. Result: ${JSON.stringify(finalResult)}`;
+      
+      if (finalResult.status === 'APPROVED' || finalResult.status === 'STEP_UP_VERIFIED' || finalResult.status === 'EXECUTED') {
+        console.log(`✅ Action was approved and executed.`);
+        return `Success: ${JSON.stringify(finalResult.data || finalResult)}`;
+      } else {
+        console.log(`❌ Action ${finalResult.status}: ${finalResult.error || 'No reason provided'}`);
+        return `Execution stopped: ${finalResult.status}`;
+      }
     } catch (e: any) {
-      console.log(`❌ Action failed or was rejected: ${e.message}`);
+      console.log(`❌ Approval failed: ${e.message}`);
       return `Execution stopped: ${e.message}`;
     }
   }

@@ -4,13 +4,17 @@ import { apiClient } from '../api/client';
 export function usePermissions() {
   const queryClient = useQueryClient();
 
-  const { data: permissions, isLoading } = useQuery({
+  const { data: permissions, isLoading, error } = useQuery({
     queryKey: ['permissions'],
     queryFn: async () => {
       const res = await apiClient.get('/permissions');
       return res.data;
     },
   });
+
+  if (error) {
+    console.error('usePermissions error:', error);
+  }
 
   const updatePermission = useMutation({
     mutationFn: async ({ service, actionType, tier }: { service: string; actionType: string; tier: string }) => {
